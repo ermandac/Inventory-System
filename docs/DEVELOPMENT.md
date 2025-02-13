@@ -1,5 +1,103 @@
 # Development Guide
 
+## Database Design
+
+### Entity Relationship Diagram
+
+```mermaid
+erDiagram
+    User ||--o{ Item : manages
+    Product ||--o{ Item : has
+    
+    User {
+        string _id PK
+        string username
+        string email UK
+        string password
+        string firstName
+        string lastName
+        string role
+        boolean isActive
+        date createdAt
+        date updatedAt
+    }
+
+    Product {
+        string _id PK
+        string sku UK
+        string name
+        string description
+        string model
+        string manufacturer
+        string category
+        map specifications
+        array certifications
+        object technicalDetails
+        object maintenanceRequirements
+        object documentation
+        date createdAt
+        date updatedAt
+    }
+
+    Item {
+        string _id PK
+        string serialNumber UK
+        string productId FK
+        string status
+        object destinationInfo
+        array maintenanceHistory
+        array calibrationHistory
+        object warranty
+        object purchaseInfo
+        string notes
+        date createdAt
+        date updatedAt
+    }
+```
+
+### Relationships
+
+1. **Product - Item** (One-to-Many)
+   - One product can have many items
+   - Each item must belong to one product
+   - Relationship maintained through `productId` in Item collection
+
+2. **User - Item** (One-to-Many)
+   - Users manage multiple items
+   - Each item can be managed by different users
+   - Relationship tracked through maintenance and calibration history
+
+### Key Constraints
+
+1. **Primary Keys**
+   - All collections use MongoDB's `_id` as primary key
+   - Auto-generated ObjectId
+
+2. **Unique Keys**
+   - User: `email`
+   - Product: `sku`
+   - Item: `serialNumber`
+
+3. **Foreign Keys**
+   - Item.productId → Product._id
+
+### Indexes
+
+1. **User Collection**
+   - `email`: Unique index
+   - `username`: Index for quick lookups
+
+2. **Product Collection**
+   - `sku`: Unique index
+   - `category`: Index for filtering
+   - `manufacturer`: Index for filtering
+
+3. **Item Collection**
+   - `serialNumber`: Unique index
+   - `productId`: Index for joins
+   - `status`: Index for filtering
+   - `purchaseInfo.date`: Index for reports
+
 ## Project Context
 This inventory management system is designed for medical equipment distribution companies. It tracks individual units of medical equipment through various states: inventory, demo, and delivery.
 
