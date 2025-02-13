@@ -5,6 +5,27 @@ import { environment } from '../../../environments/environment';
 import { Item } from '../models/item.interface';
 import { tap } from 'rxjs/operators';
 
+export interface Activity {
+  date: Date;
+  type: string;
+  serialNumber: string;
+  description: string;
+}
+
+export interface MaintenanceSchedule {
+  serialNumber: string;
+  productName: string;
+  dueDate: Date;
+  maintenanceType: string;
+  isOverdue: boolean;
+}
+
+export interface CalibrationStats {
+  dueCount: number;
+  completedThisMonth: number;
+  completionRate: number;
+}
+
 export interface InventoryReport {
   totalCounts: Record<string, number>;
   productCounts: Array<{
@@ -21,7 +42,14 @@ export interface InventoryReport {
     maintenanceDue: number;
     warrantyExpiring: number;
   };
+  recentActivities: Activity[];
   generatedAt: Date;
+  maintenanceTrend: number;
+  calibrationStats: CalibrationStats;
+  categoryDistribution: Array<{
+    name: string;
+    value: number;
+  }>;
 }
 
 @Injectable({
@@ -118,5 +146,18 @@ export class ItemsService {
 
   getInventoryReport(): Observable<InventoryReport> {
     return this.http.get<InventoryReport>(`${this.apiUrl}/report`);
+  }
+
+  getRecentActivities(): Observable<Activity[]> {
+    return this.http.get<Activity[]>(`${this.apiUrl}/activities/recent`);
+  }
+
+  getMaintenanceSchedule(): Observable<MaintenanceSchedule[]> {
+    return this.http.get<MaintenanceSchedule[]>(`${this.apiUrl}/maintenance/schedule`);
+  }
+
+
+  exportInventoryReport(): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/report/export`, { responseType: 'blob' });
   }
 }

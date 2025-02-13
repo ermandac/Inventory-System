@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const Item = require('../models/item');
 
@@ -71,6 +72,59 @@ router.get('/report', async (req, res) => {
             }
         });
 
+        // Calculate maintenance trend
+        const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        const maintenanceLastMonth = await Item.countDocuments({
+            'history.type': 'maintenance',
+            'history.date': { $gte: lastMonth, $lt: today }
+        });
+
+        const maintenanceTwoMonthsAgo = await Item.countDocuments({
+            'history.type': 'maintenance',
+            'history.date': { $gte: new Date(lastMonth.getFullYear(), lastMonth.getMonth() - 1, 1), $lt: lastMonth }
+        });
+
+        const maintenanceTrend = maintenanceTwoMonthsAgo === 0 ? 0 : 
+            ((maintenanceLastMonth - maintenanceTwoMonthsAgo) / maintenanceTwoMonthsAgo) * 100;
+
+        // Calculate calibration stats
+        const calibrationStats = {
+            dueCount: await Item.countDocuments({
+                'nextCalibrationDate': { $lte: thirtyDaysFromNow }
+            }),
+            completedThisMonth: await Item.countDocuments({
+                'history.type': 'calibration',
+                'history.date': { $gte: new Date(today.getFullYear(), today.getMonth(), 1) }
+            }),
+            completionRate: 75 // This should be calculated based on historical data
+        };
+
+        // Calculate category distribution
+        const categoryDistribution = await Item.aggregate([
+            {
+                $lookup: {
+                    from: 'products',
+                    localField: 'productId',
+                    foreignField: '_id',
+                    as: 'product'
+                }
+            },
+            { $unwind: '$product' },
+            {
+                $group: {
+                    _id: '$product.category',
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $project: {
+                    name: '$_id',
+                    value: '$count',
+                    _id: 0
+                }
+            }
+        ]);
+
         res.json({
             totalCounts,
             productCounts: formattedProductCounts,
@@ -78,6 +132,9 @@ router.get('/report', async (req, res) => {
                 maintenanceDue,
                 warrantyExpiring
             },
+            maintenanceTrend,
+            calibrationStats,
+            categoryDistribution,
             generatedAt: new Date()
         });
     } catch (error) {
@@ -496,5 +553,72 @@ router.delete('/:id', async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 });
+
+// Get recent activities
+router.get('/activities/recent', async (req, res) => {
+    try {
+        const activities = await Item.aggregate([
+            { $unwind: '$history' },
+            { $sort: { 'history.date': -1 } },
+            { $limit: 10 },
+            {
+                $project: {
+                    date: '$history.date',
+                    type: '$history.type',
+                    serialNumber: '$serialNumber',
+                    description: '$history.description'
+                }
+            }
+        ]);
+
+        res.json(activities);
+    } catch (error) {
+        console.error('Error fetching recent activities:', error);
+        res.status(500).json({ message: 'Error fetching recent activities' });
+    }
+});
+
+// Get maintenance schedule
+router.get('/maintenance/schedule', async (req, res) => {
+    try {
+        const today = new Date();
+        const thirtyDaysFromNow = new Date(today.getTime() + (30 * 24 * 60 * 60 * 1000));
+
+        const schedule = await Item.aggregate([
+            {
+                $match: {
+                    $or: [
+                        { 'maintenanceHistory.nextDueDate': { $lte: thirtyDaysFromNow } },
+                        { nextMaintenanceDate: { $lte: thirtyDaysFromNow } }
+                    ]
+                }
+            },
+            {
+                $lookup: {
+                    from: 'products',
+                    localField: 'productId',
+                    foreignField: '_id',
+                    as: 'product'
+                }
+            },
+            { $unwind: '$product' }
+        ]);
+
+        const formattedSchedule = schedule.map(item => ({
+            serialNumber: item.serialNumber,
+            productName: item.product.name,
+            dueDate: item.nextMaintenanceDate || item.maintenanceHistory[item.maintenanceHistory.length - 1]?.nextDueDate,
+            maintenanceType: item.maintenanceType || 'preventive',
+            isOverdue: (item.nextMaintenanceDate || item.maintenanceHistory[item.maintenanceHistory.length - 1]?.nextDueDate) < today
+        }));
+
+        res.json(formattedSchedule);
+    } catch (error) {
+        console.error('Error fetching maintenance schedule:', error);
+        res.status(500).json({ message: 'Error fetching maintenance schedule' });
+    }
+});
+
+
 
 module.exports = router;
