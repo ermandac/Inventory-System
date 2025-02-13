@@ -17,7 +17,7 @@ export interface Item {
   lastMaintenance?: {
     date: Date;
     type: string;
-    notes: string;
+    description: string;
   };
   warranty?: {
     startDate: Date;
@@ -32,10 +32,11 @@ export interface Item {
   maintenanceHistory: Array<{
     date: Date;
     type: string;
-    notes: string;
+    description: string;
     performedBy: string;
     nextDueDate?: Date;
     cost?: number;
+    attachments?: string[];
   }>;
   calibrationHistory: Array<{
     date: Date;

@@ -7,8 +7,15 @@ A comprehensive inventory management system designed for medical equipment distr
 - Product catalog management for medical equipment
 - Individual unit tracking with status monitoring
 - Demo and delivery management
-- Maintenance and calibration history
-- Warranty tracking
+- Maintenance and calibration history tracking
+  - Separate maintenance types (preventive, corrective, inspection)
+  - Dedicated calibration records with certificates
+  - Last maintenance date tracking and sorting
+- Warranty tracking with expiration alerts
+- Advanced sorting and filtering
+  - Sort by serial number, product name, status, or last maintenance date
+  - Filter by status (inventory, demo, delivery, maintenance)
+  - Customizable items per page (default: 10)
 - Location and assignment management
 
 ## Technology Stack

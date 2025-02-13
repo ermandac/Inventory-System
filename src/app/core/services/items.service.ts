@@ -94,18 +94,25 @@ export class ItemsService {
   }
 
   recordMaintenance(id: string, data: {
-    date?: Date;
     type: string;
-    notes: string;
+    description: string;
+    performedBy: string;
+    nextDueDate: string;
+    attachments?: string[];
+    cost: number;
   }): Observable<Item> {
+    console.log('Sending maintenance data to API:', data);
     return this.http.post<Item>(`${this.apiUrl}/${id}/maintenance`, data);
   }
 
   recordCalibration(id: string, data: {
-    date?: Date;
     notes: string;
-    nextDueDate: Date;
+    performedBy: string;
+    nextDueDate: string;
+    results: string;
+    certificate?: string;
   }): Observable<Item> {
+    console.log('Sending calibration data to API:', data);
     return this.http.post<Item>(`${this.apiUrl}/${id}/calibration`, data);
   }
 

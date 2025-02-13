@@ -16,6 +16,11 @@ import { MatMenuModule } from '@angular/material/menu';
 import { Item } from '../../core/models/item.interface';
 import { ItemsService, InventoryReport } from '../../core/services/items.service';
 import { AddItemDialogComponent } from './dialogs/add-item-dialog.component';
+import { ViewItemDialogComponent } from './dialogs/view-item-dialog.component';
+import { UpdateStatusDialogComponent } from './dialogs/update-status-dialog.component';
+import { ViewHistoryDialogComponent } from './dialogs/view-history/view-history-dialog.component';
+import { RecordMaintenanceDialogComponent } from './dialogs/record-maintenance/record-maintenance-dialog.component';
+import { RecordCalibrationDialogComponent } from './dialogs/record-calibration/record-calibration-dialog.component';
 
 @Component({
   selector: 'app-items',
@@ -34,7 +39,9 @@ import { AddItemDialogComponent } from './dialogs/add-item-dialog.component';
     MatIconModule,
     MatDialogModule,
     MatSnackBarModule,
-    MatMenuModule
+    MatMenuModule,
+    RecordMaintenanceDialogComponent,
+    RecordCalibrationDialogComponent
   ],
   template: `
     <div class="items-container">
@@ -57,7 +64,7 @@ import { AddItemDialogComponent } from './dialogs/add-item-dialog.component';
 
         <mat-form-field>
           <mat-label>Sort By</mat-label>
-          <mat-select [(value)]="selectedSort" (selectionChange)="applySorting()">
+          <mat-select [(ngModel)]="selectedSort" (selectionChange)="applySorting()">
             <mat-option value="serialNumber">Serial Number</mat-option>
             <mat-option value="productName">Product Name</mat-option>
             <mat-option value="status">Status</mat-option>
@@ -105,7 +112,7 @@ import { AddItemDialogComponent } from './dialogs/add-item-dialog.component';
             <th mat-header-cell *matHeaderCellDef mat-sort-header>Status</th>
             <td mat-cell *matCellDef="let item">
               <span class="status-badge" [style.background-color]="getStatusColor(item.status)">
-                {{ item.status }}
+                {{ capitalizeStatus(item.status) }}
               </span>
             </td>
           </ng-container>
@@ -114,7 +121,8 @@ import { AddItemDialogComponent } from './dialogs/add-item-dialog.component';
             <th mat-header-cell *matHeaderCellDef mat-sort-header>Last Maintenance</th>
             <td mat-cell *matCellDef="let item">
               <span [class.maintenance-due]="isMaintenanceDue(item)">
-                {{ item.lastMaintenance?.date | date }}
+                {{ item.maintenanceHistory && item.maintenanceHistory.length > 0 ? 
+                   (item.maintenanceHistory[item.maintenanceHistory.length - 1].date | date) : 'Never' }}
               </span>
             </td>
           </ng-container>
@@ -163,7 +171,7 @@ import { AddItemDialogComponent } from './dialogs/add-item-dialog.component';
           <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
         </table>
 
-        <mat-paginator [pageSizeOptions]="[5, 10, 25, 100]" aria-label="Select page of items"></mat-paginator>
+        <mat-paginator [pageSizeOptions]="[5, 10, 25, 100]" [pageSize]="10" aria-label="Select page of items"></mat-paginator>
       </div>
     </div>
   `,
@@ -341,20 +349,33 @@ export class ItemsComponent implements OnInit, AfterViewInit {
   ngAfterViewInit() {
     this.dataSource.sort = this.sort;
     this.dataSource.paginator = this.paginator;
-  }
 
-  applySorting() {
-    this.dataSource.sort = this.sort;
+    // Set up sorting accessor for all columns
     this.dataSource.sortingDataAccessor = (item: Item, property: string) => {
       switch (property) {
         case 'productName':
           return item.product.name;
         case 'lastMaintenance':
-          return item.lastMaintenance?.date || '';
+          // Get the most recent maintenance date from maintenanceHistory
+          if (item.maintenanceHistory && item.maintenanceHistory.length > 0) {
+            const dates = item.maintenanceHistory.map(m => new Date(m.date).getTime());
+            return Math.max(...dates);
+          }
+          return 0; // No maintenance records
         default:
           return (item as any)[property];
       }
     };
+  }
+
+  applySorting() {
+    // Force a new sort on the selected column
+    const sortState = this.sort.sortables.get(this.selectedSort);
+    if (sortState) {
+      this.sort.active = this.selectedSort;
+      this.sort.direction = 'asc';
+      this.sort.sortChange.emit({active: this.selectedSort, direction: 'asc'});
+    }
   }
 
   getStatusColor(status: string): string {
@@ -404,56 +425,78 @@ export class ItemsComponent implements OnInit, AfterViewInit {
   }
 
   updateStatus(item: Item) {
-    // For now, just update the status directly
-    const newStatus = item.status === 'inventory' ? 'demo' : 'inventory';
-    this.itemsService.updateStatus(item._id, newStatus).subscribe({
-      next: () => {
-        this.loadItems();
-        this.showSuccess('Status updated successfully');
-      },
-      error: () => this.showError('Error updating status')
+    const dialogRef = this.dialog.open(UpdateStatusDialogComponent, {
+      width: '400px',
+      data: { currentStatus: item.status }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.itemsService.updateStatus(item._id, result.status, result.notes).subscribe({
+          next: () => {
+            this.loadItems();
+            this.showSuccess('Status updated successfully');
+          },
+          error: () => this.showError('Error updating status')
+        });
+      }
     });
   }
 
   recordMaintenance(item: Item) {
-    // For now, just record a simple maintenance
-    const maintenanceData = {
-      type: 'routine',
-      notes: 'Routine maintenance check'
-    };
-    this.itemsService.recordMaintenance(item._id, maintenanceData).subscribe({
-      next: () => {
-        this.loadItems();
-        this.loadMaintenanceDueItems();
-        this.showSuccess('Maintenance recorded successfully');
-      },
-      error: () => this.showError('Error recording maintenance')
+    const dialogRef = this.dialog.open(RecordMaintenanceDialogComponent, {
+      width: '500px',
+      data: { item }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        console.log('Maintenance data from dialog:', result);
+        this.itemsService.recordMaintenance(item._id, result).subscribe({
+          next: () => {
+            this.loadItems();
+            this.loadMaintenanceDueItems();
+            this.showSuccess('Maintenance recorded successfully');
+          },
+          error: () => this.showError('Error recording maintenance')
+        });
+      }
     });
   }
 
   recordCalibration(item: Item) {
-    // For now, just record a simple calibration
-    const calibrationData = {
-      notes: 'Routine calibration check',
-      nextDueDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000) // 90 days from now
-    };
-    this.itemsService.recordCalibration(item._id, calibrationData).subscribe({
-      next: () => {
-        this.loadItems();
-        this.showSuccess('Calibration recorded successfully');
-      },
-      error: () => this.showError('Error recording calibration')
+    const dialogRef = this.dialog.open(RecordCalibrationDialogComponent, {
+      width: '500px',
+      data: { item }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        console.log('Calibration data from dialog:', result);
+        this.itemsService.recordCalibration(item._id, result).subscribe({
+          next: () => {
+            this.loadItems();
+            this.loadMaintenanceDueItems();
+            this.showSuccess('Calibration recorded successfully');
+          },
+          error: () => this.showError('Error recording calibration')
+        });
+      }
     });
   }
 
   viewHistory(item: Item) {
-    // For now, just show a success message
-    this.showSuccess('History view not implemented yet');
+    this.dialog.open(ViewHistoryDialogComponent, {
+      width: '800px',
+      data: item
+    });
   }
 
   viewDetails(item: Item) {
-    // For now, just show a success message
-    this.showSuccess('Details view not implemented yet');
+    this.dialog.open(ViewItemDialogComponent, {
+      width: '800px',
+      data: item
+    });
   }
 
   exportInventoryReport() {
@@ -488,5 +531,9 @@ export class ItemsComponent implements OnInit, AfterViewInit {
       verticalPosition: 'top',
       panelClass: ['error-snackbar']
     });
+  }
+
+  capitalizeStatus(status: string): string {
+    return status.charAt(0).toUpperCase() + status.slice(1);
   }
 }

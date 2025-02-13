@@ -329,15 +329,21 @@ router.get('/warranty-expiring', async (req, res) => {
 // Add maintenance record
 router.post('/:id/maintenance', async (req, res) => {
     try {
+        console.log('Received maintenance data:', req.body);
         const item = await Item.findById(req.params.id);
         if (item) {
             // Add to maintenance history
-            item.maintenanceHistory.push({
+            const maintenanceRecord = {
                 date: req.body.date || Date.now(),
                 type: req.body.type,
-                notes: req.body.notes,
-                performedBy: req.body.performedBy || req.user._id
-            });
+                description: req.body.description,
+                performedBy: req.body.performedBy || req.user._id,
+                nextDueDate: req.body.nextDueDate ? new Date(req.body.nextDueDate) : undefined,
+                cost: req.body.cost ? Number(req.body.cost) : undefined,
+                attachments: req.body.attachments || []
+            };
+            console.log('Creating maintenance record:', maintenanceRecord);
+            item.maintenanceHistory.push(maintenanceRecord);
 
             // Update next maintenance due date
             const frequency = item.maintenanceSchedule?.frequency || 180; // Default 6 months
@@ -363,12 +369,16 @@ router.post('/:id/calibration', async (req, res) => {
         const item = await Item.findById(req.params.id);
         if (item) {
             // Add to calibration history
-            item.calibrationHistory.push({
+            const calibrationRecord = {
                 date: req.body.date || Date.now(),
                 notes: req.body.notes,
                 performedBy: req.body.performedBy || req.user._id,
-                nextDueDate: req.body.nextDueDate
-            });
+                nextDueDate: req.body.nextDueDate ? new Date(req.body.nextDueDate) : undefined,
+                results: req.body.results,
+                certificate: req.body.certificate
+            };
+            console.log('Creating calibration record:', calibrationRecord);
+            item.calibrationHistory.push(calibrationRecord);
 
             // Update calibration schedule
             item.calibrationSchedule = {
