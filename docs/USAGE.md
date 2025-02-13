@@ -3,6 +3,58 @@
 ## Overview
 This guide explains how to use the Medical Equipment Inventory Management System for common tasks in a distribution company setting.
 
+## Authentication
+
+### Logging In
+
+1. Access the login endpoint with your credentials:
+   ```bash
+   curl -X POST -H "Content-Type: application/json" \
+   -d '{"email":"your.email@example.com","password":"your_password"}' \
+   http://localhost:3000/api/auth/users/login
+   ```
+
+2. Save the JWT token from the response:
+   ```json
+   {
+     "user": {
+       "email": "your.email@example.com",
+       "role": "your_role"
+     },
+     "token": "your_jwt_token_here"
+   }
+   ```
+
+3. Include this token in all subsequent requests:
+   ```bash
+   curl -H "Authorization: Bearer your_jwt_token_here" \
+   http://localhost:3000/api/protected/endpoint
+   ```
+
+### User Roles
+
+The system has four roles with different permissions:
+
+1. **Admin**
+   - Create and manage users
+   - Access all system features
+   - View system analytics
+
+2. **Customer**
+   - Browse product catalog
+   - Create purchase orders
+   - Track order status
+
+3. **Inventory Staff**
+   - Manage product inventory
+   - Update stock levels
+   - Process incoming shipments
+
+4. **Logistics Manager**
+   - Manage shipments
+   - Track deliveries
+   - Coordinate with suppliers
+
 ## Common Tasks
 
 ### 1. Adding New Equipment to Inventory
