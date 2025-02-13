@@ -1,5 +1,114 @@
 # API Documentation
 
+## Authentication Endpoints
+
+### Register User (Admin Only)
+```http
+POST /api/auth/users
+Authorization: Bearer <admin_token>
+
+{
+    "username": "john_doe",
+    "email": "john@example.com",
+    "password": "secure_password",
+    "role": "inventory_staff",
+    "firstName": "John",
+    "lastName": "Doe",
+    "phoneNumber": "+1234567890",
+    "organization": "Hospital ABC"
+}
+```
+
+### Login
+```http
+POST /api/auth/users/login
+
+{
+    "email": "john@example.com",
+    "password": "secure_password"
+}
+```
+
+### Logout
+```http
+POST /api/auth/users/logout
+Authorization: Bearer <token>
+```
+
+### Logout All Sessions
+```http
+POST /api/auth/users/logoutAll
+Authorization: Bearer <token>
+```
+
+### Get Current User Profile
+```http
+GET /api/auth/users/me
+Authorization: Bearer <token>
+```
+
+### Update Current User Profile
+```http
+PATCH /api/auth/users/me
+Authorization: Bearer <token>
+
+{
+    "firstName": "John",
+    "lastName": "Doe",
+    "email": "john@example.com",
+    "phoneNumber": "+1234567890",
+    "organization": "Hospital ABC"
+}
+```
+
+### Get All Users (Admin Only)
+```http
+GET /api/auth/users
+Authorization: Bearer <admin_token>
+```
+
+### Update User (Admin Only)
+```http
+PATCH /api/auth/users/:id
+Authorization: Bearer <admin_token>
+
+{
+    "role": "inventory_staff",
+    "isActive": true
+}
+```
+
+## Role-Based Access Control
+
+### Available Roles
+- `admin`: Full system access
+- `customer`: Can create and review purchase orders
+- `inventory_staff`: Can manage stock levels
+- `logistics_manager`: Can track shipments and coordinate deliveries
+
+### Role Permissions
+- **Admin**
+  - User management
+  - System configuration
+  - Full access to all features
+
+- **Customer**
+  - Create purchase orders
+  - Review order history
+  - View product catalog
+
+- **Inventory Staff**
+  - Manage stock levels
+  - Update product information
+  - Generate inventory reports
+
+- **Logistics Manager**
+  - Track shipments
+  - Update delivery status
+  - Manage delivery routes
+
+
+
 ## Products API
 
 ### List All Products
