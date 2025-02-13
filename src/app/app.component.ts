@@ -1,4 +1,6 @@
 import { Component } from '@angular/core';
+import { RouterOutlet } from '@angular/router';
+import { MatToolbarModule } from '@angular/material/toolbar';
 
 @Component({
   selector: 'app-root',
@@ -6,14 +8,23 @@ import { Component } from '@angular/core';
     <mat-toolbar color="primary">
       <span>Inventory Management System</span>
     </mat-toolbar>
-    <router-outlet></router-outlet>
+    <main class="content">
+      <router-outlet></router-outlet>
+    </main>
   `,
   styles: [`
     :host {
       display: block;
       height: 100%;
     }
-  `]
+    .content {
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+  `],
+  standalone: true,
+  imports: [RouterOutlet, MatToolbarModule]
 })
 export class AppComponent {
   title = 'Inventory Management System';

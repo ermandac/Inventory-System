@@ -1,36 +1,24 @@
-import { NgModule } from '@angular/core';
-import { BrowserModule } from '@angular/platform-browser';
-import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
-import { HttpClientModule } from '@angular/common/http';
-import { ReactiveFormsModule } from '@angular/forms';
+import { ApplicationConfig } from '@angular/core';
+import { provideRouter } from '@angular/router';
+import { provideAnimations } from '@angular/platform-browser/animations';
+import { provideHttpClient } from '@angular/common/http';
 
-import { StoreModule } from '@ngrx/store';
-import { EffectsModule } from '@ngrx/effects';
-import { StoreDevtoolsModule } from '@ngrx/store-devtools';
+import { provideStore } from '@ngrx/store';
+import { provideEffects } from '@ngrx/effects';
+import { provideStoreDevtools } from '@ngrx/store-devtools';
 
-import { MaterialModule } from './material.module';
-import { AppRoutingModule } from './app-routing.module';
-import { AppComponent } from './app.component';
+import { routes } from './app-routing.module';
 
-@NgModule({
-  declarations: [
-    AppComponent
-  ],
-  imports: [
-    BrowserModule,
-    BrowserAnimationsModule,
-    HttpClientModule,
-    ReactiveFormsModule,
-    MaterialModule,
-    AppRoutingModule,
-    StoreModule.forRoot({}),
-    EffectsModule.forRoot([]),
-    StoreDevtoolsModule.instrument({
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideRouter(routes),
+    provideAnimations(),
+    provideHttpClient(),
+    provideStore(),
+    provideEffects(),
+    provideStoreDevtools({
       maxAge: 25,
       logOnly: false
     })
-  ],
-  providers: [],
-  bootstrap: [AppComponent]
-})
-export class AppModule { }
+  ]
+};
