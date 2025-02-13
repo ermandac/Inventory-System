@@ -62,10 +62,17 @@
 
 - [x] Items Management
   - [x] List view with filtering and sorting
+    - [x] Sort by serial number, product name, status, last maintenance
+    - [x] Filter by status (inventory, demo, delivery, maintenance)
+    - [x] Default 10 items per page with customizable options
   - [x] Add new item dialog
   - [x] Status update functionality
   - [x] Maintenance recording
+    - [x] Separate types: preventive, corrective, inspection
+    - [x] Cost and attachment tracking
   - [x] Calibration recording
+    - [x] Certificate and results tracking
+    - [x] Next due date tracking
   - [x] Report generation
 
 ### Features in Progress 🚧

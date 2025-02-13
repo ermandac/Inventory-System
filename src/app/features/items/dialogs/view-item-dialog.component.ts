@@ -32,7 +32,7 @@ import { Item } from '../../../core/models/item.interface';
           <div class="info-item">
             <label>Status:</label>
             <mat-chip-set>
-              <mat-chip [color]="getStatusColor(item.status)" selected>{{item.status}}</mat-chip>
+              <mat-chip [color]="getStatusColor(item.status)" selected>{{capitalizeStatus(item.status)}}</mat-chip>
             </mat-chip-set>
           </div>
           <div class="info-item">
@@ -89,12 +89,8 @@ import { Item } from '../../../core/models/item.interface';
             <span>{{item.warranty?.endDate | date}}</span>
           </div>
           <div class="info-item">
-            <label>Provider:</label>
-            <span>{{item.warranty?.provider || 'N/A'}}</span>
-          </div>
-          <div class="info-item">
-            <label>Terms:</label>
-            <span>{{item.warranty?.terms || 'N/A'}}</span>
+            <label>Claim History:</label>
+            <span>{{item.warranty?.claimHistory?.length || 0}} claims</span>
           </div>
         </div>
       </section>
@@ -111,7 +107,7 @@ import { Item } from '../../../core/models/item.interface';
               <mat-chip>{{maintenance.type}}</mat-chip>
             </div>
             <div class="history-content">
-              <p><strong>Description:</strong> {{maintenance.notes}}</p>
+              <p><strong>Description:</strong> {{maintenance.description}}</p>
               <p><strong>Performed By:</strong> {{maintenance.performedBy}}</p>
               <p *ngIf="maintenance.nextDueDate"><strong>Next Due:</strong> {{maintenance.nextDueDate | date}}</p>
               <p *ngIf="maintenance.cost !== undefined"><strong>Cost:</strong> \${{maintenance.cost}}</p>
@@ -245,6 +241,10 @@ export class ViewItemDialogComponent {
     @Inject(MAT_DIALOG_DATA) public item: Item,
     private dialogRef: MatDialogRef<ViewItemDialogComponent>
   ) {}
+
+  capitalizeStatus(status: string): string {
+    return status.charAt(0).toUpperCase() + status.slice(1);
+  }
 
   getStatusColor(status: string): string {
     switch (status) {
