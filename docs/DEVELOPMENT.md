@@ -5,7 +5,55 @@ This inventory management system is designed for medical equipment distribution 
 
 ## Core Concepts
 
-### 1. Two-Tier Data Model
+### 1. Authentication & Authorization
+
+#### User Model
+```javascript
+const userSchema = new Schema({
+    username: { type: String, required: true, unique: true },
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    role: { type: String, enum: ['admin', 'customer', 'inventory_staff', 'logistics_manager'] },
+    firstName: String,
+    lastName: String,
+    isActive: { type: Boolean, default: true },
+    lastLogin: Date
+});
+```
+
+#### Role-Based Access
+```javascript
+// Middleware example
+const auth = async (req, res, next) => {
+    try {
+        const token = req.header('Authorization').replace('Bearer ', '');
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const user = await User.findOne({ _id: decoded._id });
+        
+        if (!user || !user.isActive) {
+            throw new Error();
+        }
+        
+        req.token = token;
+        req.user = user;
+        next();
+    } catch (error) {
+        res.status(401).send({ error: 'Please authenticate.' });
+    }
+};
+
+// Role check example
+const requireRole = (role) => {
+    return (req, res, next) => {
+        if (req.user.role !== role && req.user.role !== 'admin') {
+            return res.status(403).send({ error: 'Access denied.' });
+        }
+        next();
+    };
+};
+```
+
+### 2. Two-Tier Data Model
 ```
 Product (Catalog)           Item (Individual Units)
 ├── Specifications    →     ├── Serial Number
@@ -51,20 +99,50 @@ Product (Catalog)           Item (Individual Units)
 
 ### 2. Key API Endpoints
 ```
-Products
-GET    /api/products      # List all products
-POST   /api/products      # Create product
-GET    /api/products/:id  # Get product
-PUT    /api/products/:id  # Update product
+# Authentication
+POST   /api/auth/users/login    # Login user
+POST   /api/auth/users/logout   # Logout user
+GET    /api/auth/users/me       # Get current user
+PATCH  /api/auth/users/me       # Update profile
+POST   /api/auth/users          # Create user (admin)
+GET    /api/auth/users          # List users (admin)
 
-Items
-GET    /api/items         # List all items
-POST   /api/items         # Create item
-GET    /api/items/:id     # Get item
-PUT    /api/items/:id     # Update item
+# Products
+GET    /api/products           # List all products
+POST   /api/products           # Create product
+GET    /api/products/:id       # Get product
+PUT    /api/products/:id       # Update product
+
+# Items
+GET    /api/items              # List all items
+POST   /api/items              # Create item
+GET    /api/items/:id          # Get item
+PUT    /api/items/:id          # Update item
 ```
 
 ### 3. Common Code Patterns
+
+#### User Authentication
+```javascript
+// Login
+const response = await fetch('/api/auth/users/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+        email: 'user@example.com',
+        password: 'password123'
+    })
+});
+const { user, token } = await response.json();
+
+// Using authentication
+const response = await fetch('/api/protected/endpoint', {
+    headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+    }
+});
+```
 
 #### Creating a New Product
 ```javascript

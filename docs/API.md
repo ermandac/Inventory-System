@@ -6,33 +6,78 @@
 ```http
 POST /api/auth/users
 Authorization: Bearer <admin_token>
+Content-Type: application/json
 
+Request:
 {
     "username": "john_doe",
     "email": "john@example.com",
     "password": "secure_password",
     "role": "inventory_staff",
     "firstName": "John",
-    "lastName": "Doe",
-    "phoneNumber": "+1234567890",
-    "organization": "Hospital ABC"
+    "lastName": "Doe"
 }
+
+Response: 201 Created
+{
+    "_id": "user_id",
+    "username": "john_doe",
+    "email": "john@example.com",
+    "role": "inventory_staff",
+    "firstName": "John",
+    "lastName": "Doe",
+    "isActive": true
+}
+
+Errors:
+400 Bad Request - Invalid input or email exists
+401 Unauthorized - Invalid token
+403 Forbidden - Not an admin
 ```
 
 ### Login
 ```http
 POST /api/auth/users/login
+Content-Type: application/json
 
+Request:
 {
     "email": "john@example.com",
     "password": "secure_password"
 }
+
+Response: 200 OK
+{
+    "user": {
+        "_id": "user_id",
+        "username": "john_doe",
+        "email": "john@example.com",
+        "role": "inventory_staff",
+        "firstName": "John",
+        "lastName": "Doe",
+        "isActive": true,
+        "lastLogin": "2025-02-13T06:59:20.782Z"
+    },
+    "token": "jwt_token_here"
+}
+
+Errors:
+400 Bad Request - Invalid credentials
+401 Unauthorized - Account inactive
 ```
 
 ### Logout
 ```http
 POST /api/auth/users/logout
 Authorization: Bearer <token>
+
+Response: 200 OK
+{
+    "message": "Logged out successfully"
+}
+
+Errors:
+401 Unauthorized - Invalid token
 ```
 
 ### Logout All Sessions
@@ -45,26 +90,86 @@ Authorization: Bearer <token>
 ```http
 GET /api/auth/users/me
 Authorization: Bearer <token>
+
+Response: 200 OK
+{
+    "_id": "user_id",
+    "username": "john_doe",
+    "email": "john@example.com",
+    "role": "inventory_staff",
+    "firstName": "John",
+    "lastName": "Doe",
+    "isActive": true,
+    "lastLogin": "2025-02-13T06:59:20.782Z"
+}
+
+Errors:
+401 Unauthorized - Invalid token
 ```
 
 ### Update Current User Profile
 ```http
 PATCH /api/auth/users/me
 Authorization: Bearer <token>
+Content-Type: application/json
 
+Request:
 {
     "firstName": "John",
     "lastName": "Doe",
-    "email": "john@example.com",
-    "phoneNumber": "+1234567890",
-    "organization": "Hospital ABC"
+    "password": "new_password"
 }
+
+Response: 200 OK
+{
+    "_id": "user_id",
+    "username": "john_doe",
+    "email": "john@example.com",
+    "role": "inventory_staff",
+    "firstName": "John",
+    "lastName": "Doe",
+    "isActive": true,
+    "lastLogin": "2025-02-13T06:59:20.782Z"
+}
+
+Errors:
+400 Bad Request - Invalid input
+401 Unauthorized - Invalid token
 ```
 
 ### Get All Users (Admin Only)
 ```http
 GET /api/auth/users
 Authorization: Bearer <admin_token>
+
+Query Parameters:
+- page (optional): Page number (default: 1)
+- limit (optional): Items per page (default: 10)
+- role (optional): Filter by role
+- search (optional): Search by email or username
+
+Response: 200 OK
+{
+    "users": [
+        {
+            "_id": "user_id",
+            "username": "john_doe",
+            "email": "john@example.com",
+            "role": "inventory_staff",
+            "firstName": "John",
+            "lastName": "Doe",
+            "isActive": true,
+            "lastLogin": "2025-02-13T06:59:20.782Z"
+        }
+    ],
+    "total": 1,
+    "page": 1,
+    "totalPages": 1
+}
+
+Errors:
+401 Unauthorized - Invalid token
+403 Forbidden - Not an admin
 ```
 
 ### Update User (Admin Only)

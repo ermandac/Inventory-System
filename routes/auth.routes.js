@@ -18,13 +18,29 @@ router.post('/users', auth, authorize('admin'), async (req, res) => {
 // Login user
 router.post('/users/login', async (req, res) => {
     try {
-        const user = await User.findByCredentials(req.body.email, req.body.password);
+        console.log('Login attempt for:', req.body.email);
+        const user = await User.findOne({ email: req.body.email });
+        if (!user) {
+            console.log('User not found');
+            return res.status(400).send({ error: 'User not found' });
+        }
+
+        const bcrypt = require('bcryptjs');
+        const isMatch = await bcrypt.compare(req.body.password, user.password);
+        if (!isMatch) {
+            console.log('Password mismatch');
+            return res.status(400).send({ error: 'Invalid password' });
+        }
+
         const token = await user.generateAuthToken();
         user.lastLogin = new Date();
         await user.save();
+        
+        console.log('Login successful for:', user.email);
         res.send({ user, token });
     } catch (error) {
-        res.status(400).send({ error: 'Invalid login credentials' });
+        console.error('Login error:', error);
+        res.status(400).send({ error: error.message || 'Invalid login credentials' });
     }
 });
 

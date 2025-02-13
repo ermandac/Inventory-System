@@ -1,5 +1,83 @@
 # Data Models Documentation
 
+## User Model
+Represents a user in the system with role-based access control.
+
+### Schema
+```javascript
+{
+    username: {
+        type: String,
+        required: true,
+        unique: true,
+        trim: true,
+        minlength: 3
+    },
+    email: {
+        type: String,
+        required: true,
+        unique: true,
+        trim: true,
+        lowercase: true,
+        validate: [validateEmail, 'Please provide a valid email']
+    },
+    password: {
+        type: String,
+        required: true,
+        minlength: 8,
+        select: false  // Don't include in queries by default
+    },
+    role: {
+        type: String,
+        required: true,
+        enum: ['admin', 'customer', 'inventory_staff', 'logistics_manager'],
+        default: 'customer'
+    },
+    firstName: {
+        type: String,
+        trim: true
+    },
+    lastName: {
+        type: String,
+        trim: true
+    },
+    isActive: {
+        type: Boolean,
+        default: true
+    },
+    lastLogin: {
+        type: Date
+    },
+    tokens: [{
+        token: {
+            type: String,
+            required: true
+        }
+    }]
+}
+```
+
+### Methods
+```javascript
+// Generate JWT token
+userSchema.methods.generateAuthToken = async function() {
+    const token = jwt.sign(
+        { _id: this._id.toString(), role: this.role },
+        process.env.JWT_SECRET,
+        { expiresIn: process.env.JWT_EXPIRATION }
+    );
+    return token;
+};
+
+// Hash password before saving
+userSchema.pre('save', async function(next) {
+    if (this.isModified('password')) {
+        this.password = await bcrypt.hash(this.password, 8);
+    }
+    next();
+});
+```
+
 ## Product Model
 Represents a type of medical equipment in the catalog.
 
