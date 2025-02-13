@@ -36,6 +36,15 @@ The application is organized into feature modules:
 - Navigation menu for all features
 - User menu with profile and logout options
 
+#### Items Management
+- List view of all inventory items
+- Add item dialog with form validation
+  - Required fields: serialNumber, productId, status, purchaseInfo.date
+  - Optional fields: purchaseInfo.cost, purchaseInfo.supplier, purchaseInfo.orderReference
+  - Optional warranty information with start/end dates
+- Item details view with maintenance history
+- Status updates and maintenance recording
+
 ### Shared Components
 
 #### UI Components

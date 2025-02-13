@@ -5,6 +5,7 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideStore } from '@ngrx/store';
 import { provideEffects } from '@ngrx/effects';
 import { provideStoreDevtools } from '@ngrx/store-devtools';
+import { provideNativeDateAdapter } from '@angular/material/core';
 
 import { routes } from './routes';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
@@ -18,9 +19,7 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withInterceptors([authInterceptor, errorInterceptor, loadingInterceptor])),
     provideStore(),
     provideEffects(),
-    provideStoreDevtools({
-      maxAge: 25,
-      logOnly: false
-    })
+    provideStoreDevtools(),
+    provideNativeDateAdapter()
   ]
 };
