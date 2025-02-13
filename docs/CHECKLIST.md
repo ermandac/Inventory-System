@@ -55,10 +55,15 @@
 
 ### Components ✅
 - [x] Dashboard Component
-  - [x] Summary statistics
-  - [x] Maintenance alerts
-  - [x] Warranty alerts
-  - [x] Inventory overview
+  - [x] Summary cards
+    - [x] Total Items
+    - [x] Maintenance Due
+    - [x] Warranty Expiring
+    - [x] Calibration Status
+  - [x] Status Distribution chart
+  - [x] Category Distribution chart
+  - [x] Maintenance Schedule timeline
+  - [x] Recent Activities log
 
 - [x] Items Management
   - [x] List view with filtering and sorting

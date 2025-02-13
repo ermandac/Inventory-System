@@ -35,6 +35,11 @@ The application is organized into feature modules:
 - Main layout with header and sidebar
 - Navigation menu for all features
 - User menu with profile and logout options
+- Dashboard features:
+  - Summary cards (Total Items, Maintenance Due, Warranty Expiring, Calibration Status)
+  - Status and Category Distribution charts
+  - Maintenance Schedule timeline
+  - Recent Activities log
 
 #### Items Management
 - List view of all inventory items
