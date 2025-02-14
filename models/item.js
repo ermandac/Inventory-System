@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const itemSchema = new mongoose.Schema({
+    history: [{
+        date: Date,
+        type: String,
+        description: String
+    }],
     serialNumber: {
         type: String,
         required: true,
@@ -69,6 +74,12 @@ const itemSchema = new mongoose.Schema({
     lastUpdated: {
         type: Date,
         default: Date.now
+    },
+    nextMaintenanceDate: Date,
+    nextCalibrationDate: Date,
+    maintenanceType: {
+        type: String,
+        enum: ['preventive', 'corrective', 'calibration']
     }
 });
 
