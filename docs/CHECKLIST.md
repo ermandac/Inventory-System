@@ -80,6 +80,29 @@
     - [x] Next due date tracking
   - [x] Report generation
 
+### AI Module 🚧
+- [ ] Inventory Forecasting
+  - [ ] Data Collection & Processing
+    - [ ] Historical sales data integration
+    - [ ] Maintenance history analysis
+    - [ ] Demo usage patterns
+    - [ ] External factors integration
+  - [ ] AI/ML Implementation
+    - [ ] Time series analysis models
+    - [ ] Machine learning models setup
+    - [ ] Model training pipeline
+    - [ ] Prediction accuracy monitoring
+  - [ ] User Interface
+    - [ ] Forecast dashboard
+    - [ ] Interactive controls
+    - [ ] Reporting interface
+    - [ ] Alert notifications
+  - [ ] System Integration
+    - [ ] API endpoints implementation
+    - [ ] Real-time data synchronization
+    - [ ] Automated recommendations
+    - [ ] Security measures
+
 ### Features in Progress 🚧
 
 #### Authentication & Authorization
