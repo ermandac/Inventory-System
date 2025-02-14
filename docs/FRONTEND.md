@@ -50,6 +50,69 @@ The application is organized into feature modules:
 - Item details view with maintenance history
 - Status updates and maintenance recording
 
+#### Products
+### Overview
+The Products page provides a comprehensive interface for managing product inventory, allowing users to view, add, edit, and delete products.
+
+### Components
+
+#### ProductsComponent
+- **Location**: `src/app/features/products/products.component.ts`
+- **Functionality**:
+  - Display a table of products with sortable columns
+  - Implement search/filter functionality
+  - Provide actions for adding, editing, and deleting products
+
+#### Dialogs
+1. **AddProductDialogComponent**
+   - Location: `src/app/features/products/dialogs/add-product-dialog.component.ts`
+   - Allows creation of new products
+   - Form validation for product details
+
+2. **EditProductDialogComponent**
+   - Location: `src/app/features/products/dialogs/edit-product-dialog.component.ts`
+   - Enables editing existing product information
+   - Pre-fills form with current product details
+
+### Product Model
+```typescript
+interface Product {
+  _id?: string;
+  name: string;
+  model: string;
+  manufacturer: string;
+  category: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+```
+
+### Features
+- Responsive table with pagination
+- Sortable columns
+- Real-time search functionality
+- Add/Edit/Delete product actions
+- Form validation
+- Error handling
+
+### State Management
+- Uses Angular's reactive forms
+- Utilizes ProductService for API interactions
+- Implements optimistic UI updates
+
+### Best Practices
+- Standalone components
+- Lazy loading
+- Separation of concerns
+- Consistent error handling
+- Responsive design
+
+### Future Enhancements
+- Advanced filtering
+- Export functionality
+- Bulk actions
+- Detailed product view
+
 ### Shared Components
 
 #### UI Components
