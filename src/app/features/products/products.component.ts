@@ -10,8 +10,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { ProductService } from '@core/services/product.service';
 import { Product } from '@core/models/product.model';
-import { AddProductDialogComponent } from './dialogs/add-product-dialog.component';
-import { EditProductDialogComponent } from './dialogs/edit-product-dialog.component';
+import { AddProductDialogComponent } from './dialogs/add-product/add-product-dialog.component';
+import { EditProductDialogComponent } from './dialogs/edit-product/edit-product-dialog.component';
 
 @Component({
   selector: 'app-products',
