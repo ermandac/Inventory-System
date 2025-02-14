@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
-import { Role, Permission, PermissionType } from '@core/models/role.model';
+import { Observable, of } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
+import { Role, RoleName, Permission, PermissionType, DEFAULT_ROLES } from '@core/models/role.model';
 import { environment } from '@environments/environment';
 
 @Injectable({
@@ -18,6 +19,13 @@ export class RoleService {
 
   getRoleById(id: string): Observable<Role> {
     return this.http.get<Role>(`${this.apiUrl}/${id}`);
+  }
+
+  getRoleByName(name: RoleName): Observable<Role> {
+    return this.http.get<Role[]>(`${this.apiUrl}?name=${name}`).pipe(
+      map(roles => roles[0] || null),
+      catchError(() => of(null))
+    );
   }
 
   createRole(role: Role): Observable<Role> {
@@ -41,8 +49,35 @@ export class RoleService {
     );
   }
 
-  // Get default role
+  // Initialize default roles if not exist
+  initializeDefaultRoles(): Observable<Role[]> {
+    return this.getAllRoles().pipe(
+      map(existingRoles => {
+        const rolesToCreate = DEFAULT_ROLES.filter(
+          defaultRole => !existingRoles.some(
+            existingRole => existingRole.name === defaultRole.name
+          )
+        );
+        
+        return rolesToCreate;
+      }),
+      map(rolesToCreate => {
+        // Create roles that don't exist
+        rolesToCreate.forEach(role => {
+          this.createRole(role).subscribe();
+        });
+        
+        return rolesToCreate;
+      })
+    );
+  }
+
+  // Get default role (fallback to first role if no default)
   getDefaultRole(): Observable<Role> {
-    return this.http.get<Role>(`${this.apiUrl}/default`);
+    return this.getRoleByName(RoleName.ADMIN).pipe(
+      catchError(() => this.getAllRoles().pipe(
+        map(roles => roles[0] || null)
+      ))
+    );
   }
 }

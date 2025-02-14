@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, of } from 'rxjs';
 import { map, switchMap } from 'rxjs/operators';
-import { Role, PermissionType } from '@core/models/role.model';
+import { Role, PermissionType, ResourceType } from '@core/models/role.model';
 import { RoleService } from './role.service';
 import { UserService } from './user.service';
 
@@ -30,7 +30,7 @@ export class AuthorizationService {
   }
 
   // Check if current user has permission for a specific resource and action
-  hasPermission(resource: string, permissionType: PermissionType): Observable<boolean> {
+  hasPermission(resource: ResourceType, permissionType: PermissionType): Observable<boolean> {
     return this.currentUserRole$.pipe(
       map(role => {
         if (!role) return false;
@@ -39,24 +39,25 @@ export class AuthorizationService {
     );
   }
 
-  // Check if current user can create a resource
-  canCreate(resource: string): Observable<boolean> {
+  // Convenience methods for common permission checks
+  canCreate(resource: ResourceType): Observable<boolean> {
     return this.hasPermission(resource, PermissionType.CREATE);
   }
 
-  // Check if current user can read a resource
-  canRead(resource: string): Observable<boolean> {
+  canRead(resource: ResourceType): Observable<boolean> {
     return this.hasPermission(resource, PermissionType.READ);
   }
 
-  // Check if current user can update a resource
-  canUpdate(resource: string): Observable<boolean> {
+  canUpdate(resource: ResourceType): Observable<boolean> {
     return this.hasPermission(resource, PermissionType.UPDATE);
   }
 
-  // Check if current user can delete a resource
-  canDelete(resource: string): Observable<boolean> {
+  canDelete(resource: ResourceType): Observable<boolean> {
     return this.hasPermission(resource, PermissionType.DELETE);
+  }
+
+  canList(resource: ResourceType): Observable<boolean> {
+    return this.hasPermission(resource, PermissionType.LIST);
   }
 
   // Reload user role (e.g., after role change)
