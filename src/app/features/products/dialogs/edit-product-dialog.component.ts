@@ -25,6 +25,11 @@ import { Product } from '@core/models/product.model';
     <mat-dialog-content>
       <form [formGroup]="productForm">
         <mat-form-field>
+          <input matInput placeholder="SKU" formControlName="sku" required>
+          <mat-error *ngIf="productForm.get('sku')?.invalid">SKU is required</mat-error>
+        </mat-form-field>
+
+        <mat-form-field>
           <input matInput placeholder="Product Name" formControlName="name" required>
           <mat-error *ngIf="productForm.get('name')?.invalid">Product Name is required</mat-error>
         </mat-form-field>
@@ -70,6 +75,7 @@ export class EditProductDialogComponent {
   ) {
     this.productForm = this.fb.group({
       _id: [product._id],
+      sku: [product.sku, Validators.required],
       name: [product.name, Validators.required],
       model: [product.model, Validators.required],
       manufacturer: [product.manufacturer, Validators.required],

@@ -515,6 +515,7 @@ Errors:
 - **Request Body**:
   ```typescript
   interface CreateProductRequest {
+    sku: string;  // Required unique identifier
     name: string;
     model: string;
     manufacturer: string;
@@ -538,6 +539,7 @@ Errors:
 ```typescript
 interface Product {
   _id?: string;
+  sku: string;  // Unique Stock Keeping Unit
   name: string;
   model: string;
   manufacturer: string;
