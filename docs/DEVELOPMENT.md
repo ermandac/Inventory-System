@@ -206,6 +206,81 @@ productSchema.index({ model: 1 });
 productSchema.index({ category: 1 });
 ```
 
+## Products Module Development
+
+### Project Structure
+```
+src/app/features/products/
+│
+├── products.component.ts       # Main products page component
+├── products.routes.ts          # Routing configuration
+│
+└── dialogs/
+    ├── add-product-dialog.component.ts
+    └── edit-product-dialog.component.ts
+```
+
+### Development Workflow
+
+#### Component Creation
+1. Generate standalone component
+2. Implement template with Material table
+3. Add dialog components for add/edit actions
+4. Integrate ProductService for data operations
+
+#### Service Implementation
+```typescript
+@Injectable({
+  providedIn: 'root'
+})
+export class ProductService {
+  constructor(private http: HttpClient) {}
+
+  getAllProducts(): Observable<Product[]> { ... }
+  createProduct(product: Product): Observable<Product> { ... }
+  updateProduct(product: Product): Observable<Product> { ... }
+  deleteProduct(productId: string): Observable<void> { ... }
+}
+```
+
+### Best Practices
+- Use reactive forms for validation
+- Implement error handling
+- Use TypeScript strict mode
+- Follow Angular style guide
+- Write unit tests for components and services
+
+### Common Challenges
+- Handling form validation
+- Managing dialog state
+- Error handling
+- Performance optimization
+
+### Performance Considerations
+- Use OnPush change detection
+- Implement lazy loading
+- Optimize table rendering
+- Use trackBy for ngFor
+
+### Testing Strategy
+- Unit tests for components
+- Service method tests
+- Dialog interaction tests
+- Integration tests
+
+### Recommended Tools
+- Angular Material
+- RxJS
+- TypeScript
+- Jasmine/Karma for testing
+
+### Deployment Checklist
+- Validate all CRUD operations
+- Ensure responsive design
+- Check error handling
+- Verify authentication
+- Performance testing
+
 ## Common Development Tasks
 
 ### 1. Adding New Product Fields
