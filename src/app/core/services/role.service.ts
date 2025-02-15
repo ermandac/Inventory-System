@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { catchError, map, tap } from 'rxjs/operators';
 import { Role, RoleName, Permission, PermissionType, DEFAULT_ROLES } from '@core/models/role.model';
 import { environment } from '../../../environments/environment';
 
@@ -14,30 +14,71 @@ export class RoleService {
   constructor(private http: HttpClient) {}
 
   getAllRoles(): Observable<Role[]> {
-    return this.http.get<Role[]>(this.apiUrl);
+    console.log('[RoleService] Fetching all roles');
+    return this.http.get<Role[]>(this.apiUrl).pipe(
+      tap(roles => console.log('[RoleService] Roles found:', roles))
+    );
   }
 
   getRoleById(id: string): Observable<Role> {
-    return this.http.get<Role>(`${this.apiUrl}/${id}`);
+    console.log(`[RoleService] Fetching role with id: ${id}`);
+    return this.http.get<Role>(`${this.apiUrl}/${id}`).pipe(
+      tap(role => console.log(`[RoleService] Role found for ${id}:`, role)),
+      catchError(error => {
+        console.error(`[RoleService] Error fetching role for ${id}:`, error);
+        throw error;
+      })
+    );
   }
 
   getRoleByName(name: RoleName): Observable<Role | null> {
-    return this.http.get<Role[]>(`${this.apiUrl}?name=${name}`).pipe(
+    // Convert RoleName enum to query-friendly string
+    const queryName = name.toLowerCase().replace(/_/g, ' ');
+    console.log(`[RoleService] Fetching role with name: ${queryName}`);
+    
+    return this.http.get<Role[]>(`${this.apiUrl}?name=${queryName}`).pipe(
+      tap(roles => {
+        console.log(`[RoleService] Roles found for ${queryName}:`, roles);
+      }),
       map(roles => roles.length > 0 ? roles[0] : null),
-      catchError(() => of(null))
+      catchError(error => {
+        console.error(`[RoleService] Error fetching role for ${queryName}:`, error);
+        return of(null);
+      })
     );
   }
 
   createRole(role: Role): Observable<Role> {
-    return this.http.post<Role>(this.apiUrl, role);
+    console.log(`[RoleService] Creating role:`, role);
+    return this.http.post<Role>(this.apiUrl, role).pipe(
+      tap(createdRole => console.log(`[RoleService] Role created:`, createdRole)),
+      catchError(error => {
+        console.error(`[RoleService] Error creating role:`, error);
+        throw error;
+      })
+    );
   }
 
   updateRole(role: Role): Observable<Role> {
-    return this.http.put<Role>(`${this.apiUrl}/${role._id}`, role);
+    console.log(`[RoleService] Updating role:`, role);
+    return this.http.put<Role>(`${this.apiUrl}/${role._id}`, role).pipe(
+      tap(updatedRole => console.log(`[RoleService] Role updated:`, updatedRole)),
+      catchError(error => {
+        console.error(`[RoleService] Error updating role:`, error);
+        throw error;
+      })
+    );
   }
 
   deleteRole(id: string): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${id}`);
+    console.log(`[RoleService] Deleting role with id: ${id}`);
+    return this.http.delete<void>(`${this.apiUrl}/${id}`).pipe(
+      tap(() => console.log(`[RoleService] Role deleted: ${id}`)),
+      catchError(error => {
+        console.error(`[RoleService] Error deleting role:`, error);
+        throw error;
+      })
+    );
   }
 
   // Check if a role has a specific permission
@@ -51,6 +92,7 @@ export class RoleService {
 
   // Initialize default roles if not exist
   initializeDefaultRoles(): Observable<Role[]> {
+    console.log('[RoleService] Initializing default roles');
     return this.getAllRoles().pipe(
       map(existingRoles => {
         const rolesToCreate = DEFAULT_ROLES.filter(
@@ -61,6 +103,7 @@ export class RoleService {
         
         return rolesToCreate;
       }),
+      tap(rolesToCreate => console.log('[RoleService] Roles to create:', rolesToCreate)),
       map(rolesToCreate => {
         // Create roles that don't exist
         rolesToCreate.forEach(role => {
@@ -74,6 +117,7 @@ export class RoleService {
 
   // Get default role (fallback to first role if no default)
   getDefaultRole(): Observable<Role | null> {
+    console.log('[RoleService] Getting default role');
     return this.getRoleByName(RoleName.ADMIN).pipe(
       catchError(() => 
         this.getAllRoles().pipe(

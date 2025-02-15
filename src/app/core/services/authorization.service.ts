@@ -23,24 +23,46 @@ export class AuthorizationService {
   private initializeUserRole(): void {
     this.userService.getCurrentUser().pipe(
       switchMap(user => {
-        if (!user) return of(null);
+        console.log('[AuthorizationService] Current user:', user);
+        if (!user) {
+          console.log('[AuthorizationService] No current user found');
+          return of(null);
+        }
         
         // Convert user role to RoleName
         const roleName = this.convertUserRoleToRoleName(user.role);
+        console.log(`[AuthorizationService] Converting role: ${user.role} to ${roleName}`);
         return this.roleService.getRoleByName(roleName);
       })
-    ).subscribe(role => {
-      this.currentUserRoleSubject.next(role);
+    ).subscribe({
+      next: (role) => {
+        console.log('[AuthorizationService] User role:', role);
+        this.currentUserRoleSubject.next(role);
+      },
+      error: (err) => {
+        console.error('[AuthorizationService] Error initializing user role:', err);
+      }
     });
   }
 
   private convertUserRoleToRoleName(role: User['role']): RoleName {
+    console.log(`[AuthorizationService] Converting role: ${role}`);
     switch (role) {
-      case 'admin': return RoleName.ADMIN;
-      case 'customer': return RoleName.CUSTOMER;
-      case 'inventory_staff': return RoleName.INVENTORY_STAFF;
-      case 'logistics_manager': return RoleName.LOGISTICS_MANAGER;
-      default: return RoleName.CUSTOMER; // Default fallback
+      case 'admin': 
+        console.log('[AuthorizationService] Converted to RoleName.ADMIN');
+        return RoleName.ADMIN;
+      case 'customer': 
+        console.log('[AuthorizationService] Converted to RoleName.CUSTOMER');
+        return RoleName.CUSTOMER;
+      case 'inventory_staff': 
+        console.log('[AuthorizationService] Converted to RoleName.INVENTORY_STAFF');
+        return RoleName.INVENTORY_STAFF;
+      case 'logistics_manager': 
+        console.log('[AuthorizationService] Converted to RoleName.LOGISTICS_MANAGER');
+        return RoleName.LOGISTICS_MANAGER;
+      default: 
+        console.log('[AuthorizationService] Defaulting to RoleName.CUSTOMER');
+        return RoleName.CUSTOMER;
     }
   }
 
