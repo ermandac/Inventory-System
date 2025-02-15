@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { Role, RoleName, Permission, PermissionType, DEFAULT_ROLES } from '@core/models/role.model';
-import { environment } from '@environments/environment';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -21,9 +21,9 @@ export class RoleService {
     return this.http.get<Role>(`${this.apiUrl}/${id}`);
   }
 
-  getRoleByName(name: RoleName): Observable<Role> {
+  getRoleByName(name: RoleName): Observable<Role | null> {
     return this.http.get<Role[]>(`${this.apiUrl}?name=${name}`).pipe(
-      map(roles => roles[0] || null),
+      map(roles => roles.length > 0 ? roles[0] : null),
       catchError(() => of(null))
     );
   }
@@ -73,11 +73,13 @@ export class RoleService {
   }
 
   // Get default role (fallback to first role if no default)
-  getDefaultRole(): Observable<Role> {
+  getDefaultRole(): Observable<Role | null> {
     return this.getRoleByName(RoleName.ADMIN).pipe(
-      catchError(() => this.getAllRoles().pipe(
-        map(roles => roles[0] || null)
-      ))
+      catchError(() => 
+        this.getAllRoles().pipe(
+          map(roles => roles.length > 0 ? roles[0] : null)
+        )
+      )
     );
   }
 }

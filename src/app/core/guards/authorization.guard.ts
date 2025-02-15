@@ -7,10 +7,15 @@ import {
   UrlTree, 
   Router 
 } from '@angular/router';
-import { Observable } from 'rxjs';
-import { map, take } from 'rxjs/operators';
+import { Observable, of } from 'rxjs';
+import { map, take, catchError } from 'rxjs/operators';
 import { AuthorizationService } from '@core/services/authorization.service';
-import { PermissionType } from '@core/models/role.model';
+import { ResourceType, PermissionType } from '@core/models/role.model';
+
+interface PermissionData {
+  resource: ResourceType;
+  type: PermissionType;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -36,29 +41,13 @@ export class AuthorizationGuard implements CanActivate, CanActivateChild {
   }
 
   private checkPermission(route: ActivatedRouteSnapshot): Observable<boolean | UrlTree> {
-    const requiredPermission = route.data['permission'] as {
-      resource: string;
-      type: PermissionType;
-    };
+    const requiredPermission = route.data['permission'] as PermissionData;
 
     if (!requiredPermission) {
       console.warn('No permission defined for this route');
-      return this.authorizationService.hasPermission(
-        requiredPermission.resource, 
-        requiredPermission.type
-      ).pipe(
-        take(1),
-        map(hasPermission => {
-          if (!hasPermission) {
-            // Redirect to unauthorized page or dashboard
-            return this.router.createUrlTree(['/unauthorized']);
-          }
-          return true;
-        })
-      );
+      return of(this.router.createUrlTree(['/unauthorized']));
     }
 
-    // If no specific permission is required, allow access
     return this.authorizationService.hasPermission(
       requiredPermission.resource, 
       requiredPermission.type
@@ -66,11 +55,11 @@ export class AuthorizationGuard implements CanActivate, CanActivateChild {
       take(1),
       map(hasPermission => {
         if (!hasPermission) {
-          // Redirect to unauthorized page or dashboard
           return this.router.createUrlTree(['/unauthorized']);
         }
         return true;
-      })
+      }),
+      catchError(() => of(this.router.createUrlTree(['/unauthorized'])))
     );
   }
 }

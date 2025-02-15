@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, of } from 'rxjs';
 import { map, switchMap } from 'rxjs/operators';
-import { Role, PermissionType, ResourceType } from '@core/models/role.model';
+import { Role, PermissionType, ResourceType, RoleName } from '@core/models/role.model';
+import { User } from '@core/models/user.model';
 import { RoleService } from './role.service';
 import { UserService } from './user.service';
 
@@ -21,12 +22,26 @@ export class AuthorizationService {
 
   private initializeUserRole(): void {
     this.userService.getCurrentUser().pipe(
-      switchMap(user => 
-        user ? this.roleService.getRoleById(user.roleId) : of(null)
-      )
+      switchMap(user => {
+        if (!user) return of(null);
+        
+        // Convert user role to RoleName
+        const roleName = this.convertUserRoleToRoleName(user.role);
+        return this.roleService.getRoleByName(roleName);
+      })
     ).subscribe(role => {
       this.currentUserRoleSubject.next(role);
     });
+  }
+
+  private convertUserRoleToRoleName(role: User['role']): RoleName {
+    switch (role) {
+      case 'admin': return RoleName.ADMIN;
+      case 'customer': return RoleName.CUSTOMER;
+      case 'inventory_staff': return RoleName.INVENTORY_STAFF;
+      case 'logistics_manager': return RoleName.LOGISTICS_MANAGER;
+      default: return RoleName.CUSTOMER; // Default fallback
+    }
   }
 
   // Check if current user has permission for a specific resource and action
