@@ -6,36 +6,60 @@ const auth = async (req, res, next) => {
         const token = req.header('Authorization')?.replace('Bearer ', '');
         
         if (!token) {
-            throw new Error();
+            console.log('No token provided');
+            throw new Error('Authentication token is required');
         }
         
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        console.log('Decoded token:', decoded);
+        
         const user = await User.findOne({
-            _id: decoded.userId,
-            'tokens.token': token,
-            isActive: true
+            _id: decoded.userId || decoded._id, // Support both userId and _id
+            'tokens.token': token
         });
         
         if (!user) {
-            throw new Error();
+            console.log('No user found for token');
+            throw new Error('User not found');
         }
+        
+        console.log('Authenticated user:', {
+            _id: user._id,
+            username: user.username,
+            role: user.role
+        });
         
         req.token = token;
         req.user = user;
         next();
     } catch (error) {
-        res.status(401).send({ error: 'Please authenticate.' });
+        console.error('Authentication error:', error.message);
+        res.status(401).json({ error: 'Please authenticate.' });
     }
 };
 
 // Middleware for role-based access control
 const authorize = (...allowedRoles) => {
     return (req, res, next) => {
-        if (!allowedRoles.includes(req.user.role)) {
-            return res.status(403).send({
-                error: 'You do not have permission to perform this action'
+        console.log('Checking authorization for roles:', allowedRoles);
+        console.log('User role:', req.user.role);
+        
+        // Case-insensitive role comparison
+        const userRole = req.user.role.toLowerCase();
+        const hasPermission = allowedRoles.some(role => 
+            role.toLowerCase() === userRole
+        );
+        
+        if (!hasPermission) {
+            console.log('Authorization failed. User role not in allowed roles');
+            return res.status(403).json({
+                error: 'You do not have permission to perform this action',
+                requiredRoles: allowedRoles,
+                userRole: req.user.role
             });
         }
+        
+        console.log('Authorization successful');
         next();
     };
 };

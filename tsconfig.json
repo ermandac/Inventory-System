@@ -3,29 +3,23 @@
   "compilerOptions": {
     "baseUrl": "./",
     "outDir": "./dist/out-tsc",
-    "forceConsistentCasingInFileNames": true,
-    "strict": true,
-    "noImplicitOverride": true,
-    "noPropertyAccessFromIndexSignature": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
     "sourceMap": true,
     "declaration": false,
     "downlevelIteration": true,
     "experimentalDecorators": true,
     "moduleResolution": "node",
     "importHelpers": true,
-    "target": "ES2022",
-    "module": "ES2022",
-    "useDefineForClassFields": false,
+    "target": "es2022",
+    "module": "es2022",
     "lib": [
-      "ES2022",
+      "es2022",
       "dom"
     ],
     "paths": {
       "@app/*": ["src/app/*"],
       "@core/*": ["src/app/core/*"],
-      "@features/*": ["src/app/features/*"]
+      "@features/*": ["src/app/features/*"],
+      "@shared/*": ["src/app/shared/*"]
     }
   },
   "angularCompilerOptions": {
@@ -33,9 +27,5 @@
     "strictInjectionParameters": true,
     "strictInputAccessModifiers": true,
     "strictTemplates": true
-  },
-  "include": [
-    "src/**/*.ts",
-    "src/app/features/products/**/*.ts"
-  ]
+  }
 }

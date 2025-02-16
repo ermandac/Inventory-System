@@ -11,7 +11,8 @@
     "dev:server": "nodemon server.js",
     "dev:client": "ng serve",
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
-    "seed": "node seeds/seed.js"
+    "seed": "node seeds/seed.js",
+    "seed:roles": "node seeds/role.seed.js"
   },
   "dependencies": {
     "@angular/animations": "^17.1.0",

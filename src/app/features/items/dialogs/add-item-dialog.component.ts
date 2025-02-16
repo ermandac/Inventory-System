@@ -9,7 +9,7 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatButtonModule } from '@angular/material/button';
 import { MatNativeDateModule } from '@angular/material/core';
 import { Item } from '../../../core/models/item.interface';
-import { ProductsService, Product } from '../../../core/services/products.service';
+import { ProductService, Product } from '@core/services/product.service';
 import { Subject, takeUntil } from 'rxjs';
 
 @Component({
@@ -167,7 +167,7 @@ export class AddItemDialogComponent implements OnInit, OnDestroy {
   constructor(
     private fb: FormBuilder,
     private dialogRef: MatDialogRef<AddItemDialogComponent>,
-    private productsService: ProductsService
+    private productService: ProductService
   ) {
     const currentDate = new Date();
     this.itemForm = this.fb.group({
@@ -197,7 +197,7 @@ export class AddItemDialogComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    this.productsService.getAllProducts()
+    this.productService.getAllProducts()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (products) => {

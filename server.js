@@ -12,11 +12,20 @@ app.use(cors({
     origin: ['http://localhost:4200'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['Authorization'],
     credentials: true,
     optionsSuccessStatus: 200
 }));
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+
+// Body parser configuration
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Request logging middleware
+app.use((req, res, next) => {
+    console.log(`${req.method} ${req.path}`);
+    next();
+});
 
 // MongoDB connection
 mongoose.connect(process.env.MONGODB_URI).then(async () => {
@@ -32,6 +41,8 @@ mongoose.connect(process.env.MONGODB_URI).then(async () => {
 const productRoutes = require('./routes/product.routes');
 const itemRoutes = require('./routes/item.routes');
 const authRoutes = require('./routes/auth.routes');
+const roleRoutes = require('./routes/role.routes');
+const userRoutes = require('./routes/user.routes');
 
 // Basic route
 app.get('/', (req, res) => {
@@ -46,6 +57,8 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/items', itemRoutes);
+app.use('/api/roles', roleRoutes);
+app.use('/api/users', userRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

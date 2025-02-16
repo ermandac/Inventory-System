@@ -1,4 +1,4 @@
-import { Component, Inject } from '@angular/core';
+import { Component, Inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatDialogModule, MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
@@ -7,6 +7,10 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatInputModule } from '@angular/material/input';
 import { Item } from '../../../core/models/item.interface';
+
+interface DialogData {
+  currentStatus: Item['status'];
+}
 
 @Component({
   selector: 'app-update-status-dialog',
@@ -56,15 +60,20 @@ import { Item } from '../../../core/models/item.interface';
     }
   `]
 })
-export class UpdateStatusDialogComponent {
+export class UpdateStatusDialogComponent implements OnInit {
   statuses: Item['status'][] = ['inventory', 'demo', 'delivery', 'maintenance'];
-  selectedStatus: Item['status'] = this.data.currentStatus;
+  selectedStatus!: Item['status'];
   notes: string = '';
 
   constructor(
-    @Inject(MAT_DIALOG_DATA) public data: { currentStatus: Item['status'] },
+    @Inject(MAT_DIALOG_DATA) private dialogData: DialogData,
     private dialogRef: MatDialogRef<UpdateStatusDialogComponent>
   ) {}
+
+  ngOnInit(): void {
+    // Initialize selectedStatus in ngOnInit to ensure data is available
+    this.selectedStatus = this.dialogData.currentStatus;
+  }
 
   capitalizeStatus(status: string): string {
     return status.charAt(0).toUpperCase() + status.slice(1);
