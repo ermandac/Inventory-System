@@ -111,36 +111,43 @@ export class AuthorizationService {
     );
   }
 
-  private convertUserRoleToRoleName(role: User['role'] | string): RoleName {
-    console.log(`[AuthorizationService] Converting role: ${role}`);
+  private convertUserRoleToRoleName(role: User['role'] | string | null | undefined): RoleName {
+    console.log(`[AuthorizationService] Converting role:`, role);
     
-    // Handle null or undefined input
+    // Handle null, undefined, or empty input
     if (!role) {
-      console.error(`[AuthorizationService] Attempting to convert null/undefined role`);
-      return RoleName.CUSTOMER; // Default fallback
+      console.warn(`[AuthorizationService] Role is null/undefined/empty, defaulting to CUSTOMER`);
+      return RoleName.CUSTOMER;
     }
     
-    // Normalize the role to a string if it's an object
-    const roleString = typeof role === 'object' ? (role as User['role']).toString() : role;
-    
-    // Convert role name to lowercase for consistent matching
-    const normalizedRole = roleString.toLowerCase().replace(/\s+/g, '_');
-    
-    // Convert MongoDB role name to RoleName enum
-    switch (normalizedRole) {
-      case 'admin':
-        return RoleName.ADMIN;
-      case 'inventory_staff':
-      case 'inventory staff':
-        return RoleName.INVENTORY_STAFF;
-      case 'logistics_manager':
-      case 'logistics manager':
-        return RoleName.LOGISTICS_MANAGER;
-      case 'customer':
-        return RoleName.CUSTOMER;
-      default:
-        console.error(`[AuthorizationService] Unknown role: ${roleString}, defaulting to CUSTOMER`);
-        return RoleName.CUSTOMER;
+    try {
+      // Normalize the role to a string if it's an object or enum
+      const roleString = typeof role === 'object' 
+        ? (role as User['role']).toString() 
+        : String(role);
+      
+      // Convert role name to lowercase for consistent matching
+      const normalizedRole = roleString.toLowerCase().replace(/\s+/g, '_');
+      
+      // Convert MongoDB role name to RoleName enum
+      switch (normalizedRole) {
+        case 'admin':
+          return RoleName.ADMIN;
+        case 'inventory_staff':
+        case 'inventory staff':
+          return RoleName.INVENTORY_STAFF;
+        case 'logistics_manager':
+        case 'logistics manager':
+          return RoleName.LOGISTICS_MANAGER;
+        case 'customer':
+          return RoleName.CUSTOMER;
+        default:
+          console.warn(`[AuthorizationService] Unknown role: ${roleString}, defaulting to CUSTOMER`);
+          return RoleName.CUSTOMER;
+      }
+    } catch (error) {
+      console.error(`[AuthorizationService] Error converting role:`, error);
+      return RoleName.CUSTOMER;
     }
   }
 
@@ -291,28 +298,39 @@ export class AuthorizationService {
    * @returns Observable<boolean> indicating whether the user has the permission
    */
   hasPermission(resource: ResourceType, permissionType: PermissionType): Observable<boolean> {
-    console.log(`[AuthorizationService] Checking permission for resource: ${resource}, type: ${permissionType}`);
+    console.log(`[AuthorizationService] Checking permission for ${resource} - ${permissionType}`);
     
-    return this.fetchCurrentUserRole().pipe(
-      map(role => {
-        if (!role) {
-          console.error(`[AuthorizationService] No role found for permission check`);
-          const currentUser = this.extractCurrentUser();
-          console.error(`[AuthorizationService] Current user details:`, currentUser);
-          return false;
-        }
-
-        console.log(`[AuthorizationService] Checking permissions for role:
-          Role Name: ${role.name}
-          Role Permissions: ${JSON.stringify(role.permissions, null, 2)}`);
-        
-        const requiredPermission: Permission = { resource, type: permissionType };
-        const hasPermission = this.checkPermission(requiredPermission, role);
-        
-        console.log(`[AuthorizationService] Permission check result: ${hasPermission}`);
-        return hasPermission;
-      })
-    );
+    // Get the current user role
+    const currentRole = this.currentUserRoleSubject.getValue();
+    
+    if (!currentRole) {
+      console.warn(`[AuthorizationService] No current role found, attempting to fetch it`);
+      
+      // Try to fetch the current role
+      return this.fetchCurrentUserRole().pipe(
+        map(role => {
+          if (!role) {
+            console.warn(`[AuthorizationService] Could not fetch role, denying permission`);
+            return false;
+          }
+          
+          return this.checkPermission(
+            { resource, type: permissionType },
+            role
+          );
+        }),
+        catchError(error => {
+          console.error(`[AuthorizationService] Error checking permission:`, error);
+          return of(false);
+        })
+      );
+    }
+    
+    // If we have a current role, check the permission
+    return of(this.checkPermission(
+      { resource, type: permissionType },
+      currentRole
+    ));
   }
 
   // Convenience methods for common permission checks
@@ -390,8 +408,18 @@ export class AuthorizationService {
   }
 
   // Helper method to generate a role ID
-  private generateRoleId(roleName: string): string {
-    return `role_${roleName.toLowerCase().replace(/\s+/g, '_')}`;
+  private generateRoleId(roleName: string | null | undefined): string {
+    if (!roleName) {
+      console.warn(`[AuthorizationService] Attempting to generate role ID for null/undefined role, using 'unknown'`);
+      return 'role_unknown';
+    }
+    
+    try {
+      return `role_${String(roleName).toLowerCase().replace(/\s+/g, '_')}`;
+    } catch (error) {
+      console.error(`[AuthorizationService] Error generating role ID:`, error);
+      return 'role_unknown';
+    }
   }
 
   // Helper method to get role description
@@ -475,6 +503,4 @@ export class AuthorizationService {
     };
     return rolePermissions[roleName.toUpperCase()] || [];
   }
-
-
 }
