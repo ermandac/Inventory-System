@@ -34,7 +34,7 @@
       <mat-label>Role</mat-label>
       <mat-select formControlName="role">
         <mat-option *ngFor="let role of roles" [value]="role">
-          {{role}}
+          {{getRoleDisplayName(role)}}
         </mat-option>
       </mat-select>
       <mat-error *ngIf="userForm.get('role')?.invalid">

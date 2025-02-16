@@ -9,6 +9,7 @@ import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } 
 
 import { UserService } from '@core/services/user.service';
 import { User } from '@core/models/user.model';
+import { RoleName, RoleDisplayNames } from '@core/models/role.model';
 
 @Component({
   selector: 'app-edit-user-dialog',
@@ -27,11 +28,11 @@ import { User } from '@core/models/user.model';
   styleUrls: ['./edit-user-dialog.component.scss']
 })
 export class EditUserDialogComponent {
-  roles: Array<User['role']> = [
-    'admin', 
-    'customer', 
-    'inventory_staff', 
-    'logistics_manager'
+  roles: RoleName[] = [
+    RoleName.ADMIN,
+    RoleName.CUSTOMER,
+    RoleName.INVENTORY_STAFF,
+    RoleName.LOGISTICS_MANAGER
   ];
 
   userForm: FormGroup;
@@ -69,5 +70,9 @@ export class EditUserDialogComponent {
 
   onCancel(): void {
     this.dialogRef.close(false);
+  }
+
+  getRoleDisplayName(role: RoleName): string {
+    return RoleDisplayNames[role];
   }
 }

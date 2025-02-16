@@ -3,9 +3,13 @@ import { LoginComponent } from './login/login.component';
 import { ProfileComponent } from './profile/profile.component';
 import { authGuard } from '../../core/guards/auth.guard';
 import { Component } from '@angular/core';
+import { RouterModule } from '@angular/router';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-unauthorized',
+  standalone: true,
+  imports: [CommonModule, RouterModule],
   template: `
     <div class="unauthorized-container">
       <h1>Unauthorized Access</h1>

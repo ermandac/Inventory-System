@@ -9,6 +9,7 @@ import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } 
 
 import { UserService } from '@core/services/user.service';
 import { User } from '@core/models/user.model';
+import { RoleName, RoleDisplayNames } from '@core/models/role.model';
 
 @Component({
   selector: 'app-add-user-dialog',
@@ -27,11 +28,11 @@ import { User } from '@core/models/user.model';
   styleUrls: ['./add-user-dialog.component.scss']
 })
 export class AddUserDialogComponent {
-  roles: Array<User['role']> = [
-    'admin', 
-    'customer', 
-    'inventory_staff', 
-    'logistics_manager'
+  roles: RoleName[] = [
+    RoleName.ADMIN,
+    RoleName.CUSTOMER,
+    RoleName.INVENTORY_STAFF,
+    RoleName.LOGISTICS_MANAGER
   ];
 
   userForm: FormGroup;
@@ -46,7 +47,7 @@ export class AddUserDialogComponent {
       email: ['', [Validators.required, Validators.email]],
       firstName: ['', Validators.required],
       lastName: ['', Validators.required],
-      role: ['customer', Validators.required],
+      role: [RoleName.CUSTOMER, Validators.required],
       password: ['', [Validators.required, Validators.minLength(8)]]
     });
   }
@@ -68,5 +69,9 @@ export class AddUserDialogComponent {
 
   onCancel(): void {
     this.dialogRef.close(false);
+  }
+
+  getRoleDisplayName(role: RoleName): string {
+    return RoleDisplayNames[role];
   }
 }
