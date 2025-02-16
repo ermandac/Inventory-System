@@ -140,6 +140,208 @@ Two environment configurations:
 - HTTP interceptors for token management
 - Secure storage of user credentials
 
+## Role-Based Access Control (RBAC)
+
+### RBAC Implementation Strategy
+- **Approach**: Dynamic, granular access management
+- **Key Components**:
+  * Role-based route guards
+  * Conditional UI rendering
+  * Dynamic menu generation
+
+### Role Definitions
+1. **Admin**
+   - Full system access
+   - Manage users, roles, and configuration
+   - Access all reports and metrics
+
+2. **Inventory Staff**
+   - Manage products and inventory
+   - Limited reporting capabilities
+   - Cannot modify system settings
+
+3. **Logistics Manager**
+   - Manage shipments and order statuses
+   - View inventory and purchase orders
+   - Generate logistics reports
+
+4. **Customer**
+   - Track personal orders
+   - View product catalog
+   - Manage personal profile
+
+### Frontend RBAC Techniques
+
+#### 1. Route Guards
+```typescript
+@Injectable()
+export class RoleGuard implements CanActivate {
+  canActivate(
+    route: ActivatedRouteSnapshot,
+    state: RouterStateSnapshot
+  ): boolean {
+    const requiredRole = route.data['role'];
+    return this.authService.hasPermission(requiredRole);
+  }
+}
+
+// Route configuration example
+const routes: Routes = [
+  {
+    path: 'admin',
+    component: AdminDashboardComponent,
+    canActivate: [RoleGuard],
+    data: { role: 'ADMIN' }
+  }
+];
+```
+
+#### 2. Conditional Rendering
+```typescript
+@Component({
+  template: `
+    <div *ngIf="authService.hasPermission('MANAGE_USERS')">
+      <user-management-panel></user-management-panel>
+    </div>
+  `
+})
+export class AdminComponent {
+  constructor(public authService: AuthorizationService) {}
+}
+```
+
+#### 3. Dynamic Navigation
+```typescript
+@Injectable()
+export class NavigationService {
+  getMenuItems(role: string): MenuItem[] {
+    const menuMap = {
+      'ADMIN': [
+        { label: 'Dashboard', icon: 'dashboard', route: '/admin/dashboard' },
+        { label: 'User Management', icon: 'people', route: '/admin/users' }
+      ],
+      'INVENTORY_STAFF': [
+        { label: 'Inventory', icon: 'inventory', route: '/inventory' }
+      ]
+      // Other role-based menus
+    };
+
+    return menuMap[role] || [];
+  }
+}
+```
+
+### Permission Checking Service
+```typescript
+@Injectable({ providedIn: 'root' })
+export class AuthorizationService {
+  private permissions = {
+    'ADMIN': ['*'],
+    'INVENTORY_STAFF': [
+      'VIEW_PRODUCTS', 
+      'MANAGE_INVENTORY'
+    ],
+    'LOGISTICS_MANAGER': [
+      'VIEW_SHIPMENTS', 
+      'MANAGE_ORDERS'
+    ],
+    'CUSTOMER': [
+      'VIEW_OWN_ORDERS'
+    ]
+  };
+
+  hasPermission(role: string, permission?: string): boolean {
+    const userRole = this.getCurrentUserRole();
+    
+    if (permission) {
+      return this.permissions[userRole]?.includes(permission) || 
+             this.permissions[userRole]?.includes('*');
+    }
+    
+    return !!this.permissions[userRole];
+  }
+}
+```
+
+### Best Practices
+- Implement least privilege principle
+- Use fine-grained permissions
+- Validate permissions on both client and server
+- Implement secure role assignment
+
+### Security Considerations
+- Prevent client-side permission manipulation
+- Use server-side permission validation
+- Implement comprehensive logging
+- Regularly audit role assignments
+
+### Performance Optimization
+- Cache role permissions
+- Minimize permission check complexity
+- Use efficient lookup strategies
+
+### Future Enhancements
+- Dynamic role creation
+- More granular permission levels
+- Advanced role inheritance
+- External identity provider integration
+
+## UI/UX Design System
+
+### Recent Improvements (February 2025)
+- **Design Philosophy**: Modern, Minimalist, Accessible
+- **Color Palette**: Refined with professional, cohesive color scheme
+- **Typography**: Enhanced readability and consistency
+- **Component Interactions**: Streamlined and purposeful
+
+### Login Page Refinements
+- Redesigned interface with clean, minimalist approach
+- Responsive design for multiple screen sizes
+- Improved form validation and error handling
+- Integrated Megaion branding elements
+
+### Navigation Improvements
+- Modernized sidebar navigation
+- Consistent logo placement
+- Improved active and hover states
+- Optimized user interaction
+
+## Technology Stack
+- **Framework**: Angular 17
+- **UI Library**: Angular Material
+- **Styling**: SCSS with global design system
+- **State Management**: NgRx
+
+## Design Principles
+1. **Clarity**: Simple, intuitive interfaces
+2. **Consistency**: Uniform design across components
+3. **Performance**: Lightweight, responsive interactions
+4. **Accessibility**: Inclusive design for all users
+
+## Component Design Guidelines
+- Use Angular Material components
+- Implement responsive design
+- Follow WCAG accessibility standards
+- Minimize unnecessary animations
+- Prioritize user experience
+
+## Styling Approach
+- Utilize CSS variables for theming
+- Implement mobile-first design
+- Use flexbox and grid for layouts
+- Maintain consistent padding and margins
+
+## Performance Considerations
+- Lazy load components
+- Minimize DOM manipulations
+- Use Angular's change detection strategies
+- Optimize asset loading
+
+## Future Improvements
+- Continuous UX refinement
+- Accessibility enhancements
+- Performance optimizations
+
 ## Getting Started
 
 1. Install dependencies:
@@ -198,3 +400,15 @@ Two environment configurations:
    - Enhanced password policies
    - Session timeout handling
    - Security headers configuration
+
+## Troubleshooting RBAC
+- Verify role assignment
+- Check permission mappings
+- Review authorization service
+- Monitor access logs
+
+## Testing RBAC
+- Unit tests for permission checks
+- Integration tests for role-based access
+- Simulate different user roles
+- Verify UI restrictions
