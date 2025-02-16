@@ -74,20 +74,6 @@ export class NavigationService {
       icon: 'assessment',
       route: '/reports',
       allowedRoles: [RoleName.ADMIN, RoleName.INVENTORY_STAFF, RoleName.LOGISTICS_MANAGER]
-    },
-    // Settings
-    {
-      label: 'Settings',
-      icon: 'settings',
-      route: '/settings',
-      allowedRoles: [RoleName.ADMIN]
-    },
-    // Profile (for all authenticated users)
-    {
-      label: 'Profile',
-      icon: 'person',
-      route: '/profile',
-      allowedRoles: [RoleName.ADMIN, RoleName.INVENTORY_STAFF, RoleName.LOGISTICS_MANAGER, RoleName.CUSTOMER]
     }
   ];
 
