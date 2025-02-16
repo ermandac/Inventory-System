@@ -2,9 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
-import { Observable } from 'rxjs';
-import { NavigationService, NavItem } from '@core/services/navigation.service';
 import { RouterModule } from '@angular/router';
+import { NavigationService, NavItem } from '@core/services/navigation.service';
 
 @Component({
   selector: 'app-dynamic-navigation',
@@ -15,38 +14,18 @@ import { RouterModule } from '@angular/router';
     MatIconModule,
     RouterModule
   ],
-  template: `
-    <mat-nav-list>
-      <mat-list-item 
-        *ngFor="let item of navItems$ | async" 
-        (click)="navigateTo(item.route)"
-        [routerLink]="item.route"
-        class="nav-item"
-      >
-        <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
-        <span matListItemTitle>{{ item.label }}</span>
-      </mat-list-item>
-    </mat-nav-list>
-  `,
-  styles: [`
-    .nav-item {
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-    }
-    .nav-item:hover {
-      background-color: rgba(0, 0, 0, 0.1);
-    }
-  `]
+  templateUrl: './dynamic-navigation.component.html',
+  styleUrls: ['./dynamic-navigation.component.scss']
 })
 export class DynamicNavigationComponent implements OnInit {
-  navItems$: Observable<NavItem[]>;
+  navItems: NavItem[] = [];
 
-  constructor(private navigationService: NavigationService) {
-    this.navItems$ = this.navigationService.getVisibleNavItems();
-  }
+  constructor(private navigationService: NavigationService) {}
 
   ngOnInit(): void {
-    console.log('[DynamicNavigationComponent] Initializing navigation');
+    this.navigationService.getVisibleNavItems().subscribe(
+      items => this.navItems = items
+    );
   }
 
   navigateTo(route: string): void {
