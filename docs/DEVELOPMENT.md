@@ -90,6 +90,122 @@ Product (Catalog)           Item (Individual Units)
     └─────────────────┘         └─────────────┘
 ```
 
+## Role-Based Access Control (RBAC) Implementation
+
+### RBAC Architecture
+- **Approach**: Granular, hierarchical permission management
+- **Key Components**:
+  * Role Definitions
+  * Permission Mapping
+  * Dynamic Access Control
+
+### Role Hierarchy
+1. **Admin**
+   - Full system access
+   - Manage users, roles, and system configuration
+   - Access to all reports and metrics
+
+2. **Inventory Staff**
+   - Product and inventory management
+   - Limited reporting capabilities
+   - Cannot modify system settings
+
+3. **Logistics Manager**
+   - Shipment and order status management
+   - View inventory and purchase orders
+   - Generate logistics reports
+
+4. **Customer**
+   - Personal order tracking
+   - View product catalog
+   - Manage personal profile
+
+### Permission Implementation
+- **Frontend**: 
+  * Route guards
+  * Conditional rendering
+  * Menu item visibility
+- **Backend**: 
+  * API endpoint authorization
+  * Request-level permission checks
+
+### Authorization Service
+```typescript
+@Injectable({
+  providedIn: 'root'
+})
+export class AuthorizationService {
+  // Role and permission management methods
+  hasPermission(role: string, permission: string): boolean {
+    const rolePermissions = {
+      'ADMIN': ['*'],
+      'INVENTORY_STAFF': ['VIEW_PRODUCTS', 'MANAGE_INVENTORY'],
+      'LOGISTICS_MANAGER': ['VIEW_SHIPMENTS', 'MANAGE_ORDERS'],
+      'CUSTOMER': ['VIEW_OWN_ORDERS']
+    };
+
+    return rolePermissions[role]?.includes(permission) || 
+           rolePermissions[role]?.includes('*');
+  }
+
+  // Dynamic menu generation based on role
+  getAccessibleMenuItems(role: string): MenuItem[] {
+    // Implementation details
+  }
+}
+```
+
+### Route Guard Example
+```typescript
+@Injectable({
+  providedIn: 'root'
+})
+export class RoleGuard implements CanActivate {
+  constructor(
+    private authService: AuthorizationService,
+    private router: Router
+  ) {}
+
+  canActivate(
+    route: ActivatedRouteSnapshot,
+    state: RouterStateSnapshot
+  ): boolean {
+    const requiredRole = route.data['role'];
+    const currentUserRole = this.authService.getCurrentUserRole();
+
+    if (this.authService.hasPermission(currentUserRole, requiredRole)) {
+      return true;
+    }
+
+    // Redirect to unauthorized page
+    this.router.navigate(['/unauthorized']);
+    return false;
+  }
+}
+```
+
+### Best Practices
+- Implement least privilege principle
+- Use fine-grained permissions
+- Regularly audit and update roles
+- Implement secure role assignment
+
+### Security Considerations
+- Prevent role escalation
+- Implement secure role management
+- Use JWT for role-based token generation
+- Validate permissions on both client and server
+
+### Performance Optimization
+- Cache role permissions
+- Minimize permission checks
+- Use efficient permission lookup strategies
+
+### Logging and Auditing
+- Log role-based access attempts
+- Track unauthorized access attempts
+- Implement comprehensive audit trails
+
 ## Quick Reference
 
 ### 1. Status Definitions
@@ -205,6 +321,75 @@ itemSchema.index({ serialNumber: 1 }, { unique: true });
 productSchema.index({ model: 1 });
 productSchema.index({ category: 1 });
 ```
+
+## UI Development Workflow
+
+### Design System Implementation
+- **Approach**: Modular, consistent UI components
+- **Tools**: Angular Material, SCSS
+- **Principles**: 
+  * Minimalist design
+  * Responsive layouts
+  * Accessibility-first
+
+### Recent UI Improvements (February 2025)
+- Redesigned login page interface
+- Enhanced navigation component styling
+- Implemented global design system
+- Refined color palette and typography
+- Improved component interactions
+
+## Component Development Guidelines
+
+### Angular Components
+- Use standalone components
+- Implement lazy loading
+- Follow single responsibility principle
+- Minimize component complexity
+
+### Styling Best Practices
+- Use SCSS variables for theming
+- Implement responsive design
+- Avoid inline styles
+- Use Angular Material's theming system
+
+### Performance Optimization
+- Use OnPush change detection
+- Minimize DOM manipulations
+- Implement efficient data binding
+- Lazy load heavy components
+
+## Design Workflow
+1. **Prototype**: Create low-fidelity mockups
+2. **Design**: Develop high-fidelity designs
+3. **Implementation**: Build Angular components
+4. **Review**: Conduct UX/UI review
+5. **Iterate**: Continuous improvement
+
+## UI/UX Checklist
+- [ ] Responsive across devices
+- [ ] Consistent color scheme
+- [ ] Accessible interactions
+- [ ] Minimal, purposeful animations
+- [ ] Performance-optimized components
+
+## Recommended Tools
+- Figma for design prototyping
+- Angular Material Component Dev Kit
+- Chrome DevTools
+- Lighthouse for performance auditing
+
+## Contribution Guidelines
+- Follow Angular style guide
+- Write unit tests for components
+- Document component purposes
+- Conduct peer reviews
+
+## Future UI Roadmap
+- Implement dark mode
+- Enhanced accessibility features
+- Performance optimizations
+- Continued design system refinement
 
 ## Products Module Development
 

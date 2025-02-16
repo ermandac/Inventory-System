@@ -3,6 +3,25 @@
 ## Project Overview
 A comprehensive inventory management system designed for medical equipment distribution companies. This system helps track medical equipment from reception through demos and final delivery to healthcare facilities.
 
+## Recent UI Improvements
+### Design System
+- Implemented a modern, professional design language
+- Introduced a consistent color palette and typography
+- Enhanced user experience with subtle, purposeful animations
+- Improved accessibility and readability
+
+### Login Page Refinements
+- Redesigned login interface with a clean, minimalist approach
+- Implemented responsive design for various screen sizes
+- Added modern form validation and error handling
+- Integrated Megaion branding elements
+
+### Navigation Improvements
+- Streamlined sidebar navigation
+- Added active and hover states with improved visual feedback
+- Consistent logo placement across components
+- Optimized for better user interaction
+
 ## Features
 - Product catalog management for medical equipment
 - Individual unit tracking with status monitoring
@@ -30,6 +49,7 @@ A comprehensive inventory management system designed for medical equipment distr
 - **UI Library**: Angular Material
 - **State Management**: NgRx
 - **CSS**: SCSS
+- **Design Principles**: Modern, Minimalist, Accessible
 
 ### Tools
 - **Package Manager**: npm
@@ -53,95 +73,31 @@ cd inventory-system
 
 2. Install dependencies:
 ```bash
-# Install backend dependencies
-cd backend
-npm install
-
-# Install frontend dependencies
-cd ../
 npm install
 ```
 
-3. Create a `.env` file in the backend directory:
-```env
-PORT=3000
-MONGODB_URI=mongodb://localhost:27017/inventory-system
-NODE_ENV=development
-JWT_SECRET=your-secret-key
-```
-
-4. Start the development servers:
+3. Start the development server:
 ```bash
-# Start backend server
-cd backend
-npm run dev
-
-# In a new terminal, start frontend server
-cd ../
-npm start
+ng serve
 ```
 
-The application will be available at:
-- Frontend: http://localhost:4200
-- Backend API: http://localhost:3000/api
+## Design Philosophy
+Our UI is built with a focus on:
+- Clarity and simplicity
+- Consistent user experience
+- Performance and responsiveness
+- Accessibility for all users
 
-## Project Structure
-```
-inventory-system/
-├── backend/
-│   ├── models/
-│   │   ├── product.js
-│   │   └── item.js
-│   ├── routes/
-│   │   ├── product.routes.js
-│   │   └── item.routes.js
-│   ├── config/
-│   │   └── db.js
-│   └── server.js
-├── src/
-│   ├── app/
-│   │   ├── core/
-│   │   │   ├── services/
-│   │   │   ├── guards/
-│   │   │   ├── interceptors/
-│   │   │   └── components/
-│   │   ├── features/
-│   │   │   ├── auth/
-│   │   │   ├── dashboard/
-│   │   │   ├── products/
-│   │   │   ├── items/
-│   │   │   └── reports/
-│   │   └── layout/
-│   │       ├── header/
-│   │       └── sidebar/
-│   ├── assets/
-│   └── environments/
-├── docs/
-│   ├── API.md
-│   ├── FRONTEND.md
-│   ├── MODELS.md
-│   └── CHECKLIST.md
-├── package.json
-└── README.md
-├── models/
-│   ├── product.js        # Product catalog schema
-│   └── item.js           # Individual item schema
-├── routes/
-│   ├── product.routes.js # Product API endpoints
-│   └── item.routes.js    # Item API endpoints
-├── server.js             # Main application file
-├── package.json          # Project dependencies
-└── .env                  # Environment variables
-```
-
-## Documentation
-For detailed documentation, please refer to:
-- [API Documentation](docs/API.md)
-- [Data Models](docs/MODELS.md)
-- [Usage Guide](docs/USAGE.md)
+## Changelog
+### UI Improvements (February 2025)
+- Modernized login page design
+- Enhanced navigation component styling
+- Implemented global design system
+- Refined color palette and typography
+- Improved component interactions
 
 ## Contributing
-This is a capstone project. Please follow the project guidelines and coding standards.
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
 
 ## License
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
