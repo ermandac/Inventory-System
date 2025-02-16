@@ -5,6 +5,7 @@ export interface Product {
   model: string;
   manufacturer: string;
   category: string;
+  unitPrice: number;
   createdAt?: Date;
   updatedAt?: Date;
 }

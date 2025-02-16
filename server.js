@@ -43,6 +43,7 @@ const itemRoutes = require('./routes/item.routes');
 const authRoutes = require('./routes/auth.routes');
 const roleRoutes = require('./routes/role.routes');
 const userRoutes = require('./routes/user.routes');
+const orderRoutes = require('./routes/order.routes');
 
 // Basic route
 app.get('/', (req, res) => {
@@ -57,6 +58,7 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/items', itemRoutes);
+app.use('/api/orders', orderRoutes);
 app.use('/api/roles', roleRoutes);
 app.use('/api/users', userRoutes);
 

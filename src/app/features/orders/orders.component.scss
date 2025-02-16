@@ -1,0 +1,55 @@
+.orders-container {
+  padding: 20px;
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .filter-section {
+    margin-bottom: 20px;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  .status-chip {
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 0.8em;
+    text-transform: uppercase;
+
+    &.pending {
+      background-color: #FFC107;
+      color: white;
+    }
+
+    &.processing {
+      background-color: #2196F3;
+      color: white;
+    }
+
+    &.ready_for_delivery {
+      background-color: #4CAF50;
+      color: white;
+    }
+
+    &.in_delivery {
+      background-color: #9C27B0;
+      color: white;
+    }
+
+    &.completed {
+      background-color: #8BC34A;
+      color: white;
+    }
+
+    &.cancelled {
+      background-color: #F44336;
+      color: white;
+    }
+  }
+}

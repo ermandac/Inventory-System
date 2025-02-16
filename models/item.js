@@ -15,13 +15,18 @@ const itemSchema = new mongoose.Schema({
     status: {
         type: String,
         required: true,
-        enum: ['demo', 'inventory', 'delivery'],
+        enum: ['inventory', 'reserved', 'delivery', 'demo', 'returned'],
         default: 'inventory'
     },
     productId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Product',
         required: true
+    },
+    associatedOrder: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Order',
+        default: null
     },
     // For items in 'demo' or 'delivery' status
     destinationInfo: {

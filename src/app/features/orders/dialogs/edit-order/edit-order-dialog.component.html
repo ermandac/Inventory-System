@@ -1,0 +1,62 @@
+<div class="edit-order-dialog">
+  <h2 mat-dialog-title>Edit Order #{{ data.order.orderNumber }}</h2>
+  
+  <mat-dialog-content>
+    <form [formGroup]="orderForm">
+      <mat-form-field appearance="outline">
+        <mat-label>Customer</mat-label>
+        <input matInput formControlName="customer" readonly>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Order Status</mat-label>
+        <mat-select formControlName="status">
+          <mat-option *ngFor="let status of orderStatuses" [value]="status">
+            {{ status }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <div class="order-details">
+        <h3>Order Items</h3>
+        <mat-table [dataSource]="data.order.items">
+          <ng-container matColumnDef="product">
+            <mat-header-cell *matHeaderCellDef>Product</mat-header-cell>
+            <mat-cell *matCellDef="let item">{{ item.product }}</mat-cell>
+          </ng-container>
+
+          <ng-container matColumnDef="quantity">
+            <mat-header-cell *matHeaderCellDef>Quantity</mat-header-cell>
+            <mat-cell *matCellDef="let item">{{ item.quantity }}</mat-cell>
+          </ng-container>
+
+          <ng-container matColumnDef="unitPrice">
+            <mat-header-cell *matHeaderCellDef>Unit Price</mat-header-cell>
+            <mat-cell *matCellDef="let item">${{ item.unitPrice }}</mat-cell>
+          </ng-container>
+
+          <ng-container matColumnDef="total">
+            <mat-header-cell *matHeaderCellDef>Total</mat-header-cell>
+            <mat-cell *matCellDef="let item">${{ item.quantity * item.unitPrice }}</mat-cell>
+          </ng-container>
+
+          <mat-header-row *matHeaderRowDef="['product', 'quantity', 'unitPrice', 'total']"></mat-header-row>
+          <mat-row *matRowDef="let row; columns: ['product', 'quantity', 'unitPrice', 'total']"></mat-row>
+        </mat-table>
+
+        <div class="order-summary">
+          <h3>Order Total: ${{ calculateTotalValue() }}</h3>
+        </div>
+      </div>
+    </form>
+  </mat-dialog-content>
+
+  <mat-dialog-actions>
+    <button mat-button (click)="cancel()">Cancel</button>
+    <button mat-raised-button color="primary" 
+            (click)="updateOrder()" 
+            [disabled]="orderForm.invalid">
+      Update Order
+    </button>
+  </mat-dialog-actions>
+</div>
