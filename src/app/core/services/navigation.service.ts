@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, of, map, catchError } from 'rxjs';
 import { Router } from '@angular/router';
 import { RoleName } from '@core/models/role.model';
 import { AuthorizationService } from './authorization.service';
@@ -91,16 +91,31 @@ export class NavigationService {
       console.log('[NavigationService] Role changed:', role);
       
       if (role) {
-        const filteredItems = this.getNavigationItems();
+        // Normalize role name for comparison
+        const normalizedRoleName = this.normalizeRoleName(role.name);
+        console.log(`[NavigationService] Normalized role name: ${normalizedRoleName}`);
+        
+        const filteredItems = this.navigationItems.filter(item => 
+          item.allowedRoles.some(allowedRole => 
+            this.normalizeRoleName(allowedRole) === normalizedRoleName
+          )
+        );
+
         console.log('[NavigationService] Filtered nav items:', 
           JSON.stringify(filteredItems, null, 2)
         );
+        
         this.visibleNavItems.next(filteredItems);
       } else {
         console.log('[NavigationService] No role, clearing navigation items');
         this.visibleNavItems.next([]);
       }
     });
+  }
+
+  // Helper method to normalize role names for comparison
+  private normalizeRoleName(roleName: string): string {
+    return roleName.toLowerCase().replace(/\s+/g, '_');
   }
 
   // Method to force refresh navigation items
@@ -149,8 +164,36 @@ export class NavigationService {
     this.router.navigate([route]);
   }
 
+  // Method to get visible navigation items based on current role
   getVisibleNavItems(): Observable<NavItem[]> {
-    return this.visibleNavItems.asObservable();
+    return this.authorizationService.currentUserRole$.pipe(
+      map(role => {
+        if (!role) {
+          console.log('[NavigationService] No role, returning empty nav items');
+          return [];
+        }
+
+        // Normalize role name for comparison
+        const normalizedRoleName = this.normalizeRoleName(role.name);
+        console.log(`[NavigationService] Filtering nav items for role: ${normalizedRoleName}`);
+        
+        const filteredItems = this.navigationItems.filter(item => 
+          item.allowedRoles.some(allowedRole => 
+            this.normalizeRoleName(allowedRole) === normalizedRoleName
+          )
+        );
+
+        console.log('[NavigationService] Filtered nav items:', 
+          JSON.stringify(filteredItems, null, 2)
+        );
+
+        return filteredItems;
+      }),
+      catchError(error => {
+        console.error('[NavigationService] Error getting visible nav items:', error);
+        return of([]);
+      })
+    );
   }
 
   clearNavigationItems(): void {
@@ -159,32 +202,20 @@ export class NavigationService {
   }
 
   private getNavigationItems(): NavItem[] {
-    // Get the current user role from the authorization service
     const currentRole = this.authorizationService.getCurrentUserRole();
-    console.log('[NavigationService] Current role:', currentRole);
-
+    
     if (!currentRole) {
-      console.error('[NavigationService] No role found, returning empty navigation items');
+      console.log('[NavigationService] No current role, returning empty nav items');
       return [];
     }
 
-    // Log all navigation items before filtering
-    console.log('[NavigationService] Total navigation items:', this.navigationItems.length);
+    console.log(`[NavigationService] Getting nav items for role: ${currentRole.name}`);
+    
+    const filteredItems = this.navigationItems.filter(item => 
+      item.allowedRoles.includes(currentRole.name)
+    );
 
-    // Filter navigation items based on the current role
-    const filteredItems = this.navigationItems.filter(item => {
-      // Check if the item's allowed roles include the current role
-      const hasAccess = item.allowedRoles.includes(currentRole.name);
-      
-      console.log(`[NavigationService] Checking navigation item: ${item.label}
-        Allowed Roles: ${JSON.stringify(item.allowedRoles)}
-        Current Role: ${currentRole.name}
-        Has Access: ${hasAccess}`);
-      
-      return hasAccess;
-    });
-
-    console.log('[NavigationService] Filtered navigation items:', 
+    console.log('[NavigationService] Filtered nav items:', 
       JSON.stringify(filteredItems, null, 2)
     );
 

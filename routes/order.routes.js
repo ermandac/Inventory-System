@@ -19,7 +19,7 @@ router.post('/',
 
 router.get('/', 
     auth, 
-    authorize(ROLES.ADMIN, ROLES.INVENTORY_STAFF, ROLES.LOGISTICS_MANAGER), 
+    authorize(ROLES.ADMIN, ROLES.INVENTORY_STAFF, ROLES.LOGISTICS_MANAGER, ROLES.CUSTOMER), 
     orderController.getOrders
 );
 

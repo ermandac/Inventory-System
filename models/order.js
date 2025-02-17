@@ -12,6 +12,16 @@ const orderSchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
+    visibleToRoles: [{
+        type: String,
+        enum: ['admin', 'customer', 'inventory_staff', 'logistics_manager'],
+        default: ['customer']
+    }],
+    customerVisibility: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    },
     status: {
         type: String,
         enum: ['pending', 'processing', 'ready_for_delivery', 'in_delivery', 'completed', 'cancelled'],
@@ -65,7 +75,24 @@ const orderSchema = new mongoose.Schema({
 }, {
     timestamps: true,
     toJSON: { virtuals: true },
-    toObject: { virtuals: true }
+    toObject: { virtuals: true },
+    methods: {
+        isVisibleTo(user) {
+            // Check if the user can view this order
+            if (!user) return false;
+            
+            // Admin can see all orders
+            if (user.role === 'admin') return true;
+            
+            // Customer can only see their own orders
+            if (user.role === 'customer') {
+                return this.customer.toString() === user._id.toString();
+            }
+            
+            // Inventory staff and logistics managers can see orders based on their role
+            return this.visibleToRoles.includes(user.role);
+        }
+    }
 });
 
 orderSchema.virtual('totalValue').get(function() {

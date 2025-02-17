@@ -81,7 +81,9 @@ const authorize = (...allowedRoles) => {
                 return res.status(403).json({
                     error: 'You do not have permission to perform this action',
                     requiredRoles: flattenedRoles,
-                    userRole: req.user.role
+                    userRole: req.user.role,
+                    normalizedUserRole: userRole,
+                    normalizedAllowedRoles
                 });
             }
             

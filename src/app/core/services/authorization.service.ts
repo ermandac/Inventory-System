@@ -26,314 +26,203 @@ export class AuthorizationService {
     private userService: UserService,
     private authStateService: AuthStateService
   ) {
+    // Explicitly initialize user role on service creation
+    this.initializeUserRole();
+
     // Listen to role changes from auth state
     this.authStateService.userRole$.subscribe(role => {
       if (role) {
+        console.log('[AuthorizationService] Role from auth state:', role);
         this.updateCurrentUserRole(role);
       } else {
+        console.log('[AuthorizationService] No role from auth state, clearing');
         this.clearCurrentUserRole();
       }
     });
   }
 
-  private extractCurrentUser(): User | null {
-    try {
-      const userSource = this.userService.getCurrentUser();
-      
-      // If it's an observable, try to extract synchronously
-      if (userSource instanceof Observable) {
-        console.log(`[AuthorizationService] User source is an Observable`);
+  private extractCurrentUser(): Observable<User | null> {
+    return this.userService.getCurrentUser().pipe(
+      switchMap(userSource => {
+        // If userSource is already an Observable, flatten it
+        if (userSource instanceof Observable) {
+          return userSource.pipe(
+            take(1),
+            map(user => {
+              // Ensure the result is a User object or null
+              return this.isValidUser(user) ? user : null;
+            }),
+            catchError(() => of(null))
+          );
+        }
         
-        // This is a synchronous extraction, which might not work perfectly
-        let extractedUser: User | null = null;
-        userSource.pipe(
-          take(1)
-        ).subscribe({
-          next: (user) => {
-            extractedUser = user;
-            console.log(`[AuthorizationService] Extracted user from Observable:`, extractedUser);
-          },
-          error: (err) => {
-            console.error(`[AuthorizationService] Error extracting user from Observable:`, err);
-            extractedUser = null;
-          }
-        });
+        // If userSource is a User object, validate and return
+        if (this.isValidUser(userSource)) {
+          return of(userSource);
+        }
         
-        return extractedUser;
-      }
-      
-      // If it's already a user object
-      if (userSource && typeof userSource === 'object' && '_id' in userSource) {
-        console.log(`[AuthorizationService] Direct user object:`, userSource);
-        return userSource as User;
-      }
-      
-      console.error(`[AuthorizationService] Unable to extract current user`);
-      return null;
-    } catch (error) {
-      console.error(`[AuthorizationService] Error in extractCurrentUser:`, error);
-      return null;
+        // If not a valid user, return null
+        return of(null);
+      }),
+      catchError(() => of(null))
+    );
+  }
+
+  // Helper method to validate User object
+  private isValidUser(user: any): user is User {
+    return user && 
+      typeof user === 'object' && 
+      '_id' in user && 
+      'username' in user && 
+      'email' in user && 
+      'role' in user && 
+      // Check if role is a valid string
+      ['admin', 'customer', 'inventory_staff', 'logistics_manager'].includes(
+        String(user.role).toLowerCase()
+      );
+  }
+
+  private convertToRoleName(role: User['role'] | string | null | undefined): RoleName {
+    if (!role) {
+      return RoleName.CUSTOMER;
+    }
+    
+    const roleString = typeof role === 'object' 
+      ? (role as User['role']).toString() 
+      : String(role);
+    
+    // Normalize role to lowercase and remove uppercase variants
+    const normalizedRole = roleString.toLowerCase().replace(/\s+/g, '_');
+    
+    switch (normalizedRole) {
+      case 'admin':
+      case 'admin':
+        return RoleName.ADMIN;
+      case 'inventory_staff':
+      case 'inventory staff':
+      case 'inventorystaff':
+        return RoleName.INVENTORY_STAFF;
+      case 'logistics_manager':
+      case 'logistics manager':
+      case 'logisticsmanager':
+        return RoleName.LOGISTICS_MANAGER;
+      case 'customer':
+      default:
+        return RoleName.CUSTOMER;
     }
   }
 
-  private fetchCurrentUserRole(): Observable<Role | null> {
-    console.log(`[AuthorizationService] Fetching current user role`);
-    
-    // Extract current user
-    const currentUser = this.extractCurrentUser();
-    
-    if (!currentUser) {
-      console.error(`[AuthorizationService] No current user found`);
-      return of(null);
-    }
-    
-    // Convert user role to RoleName
-    const roleName = this.convertUserRoleToRoleName(currentUser.role);
-    
-    console.log(`[AuthorizationService] Converted role name for current user: ${roleName}`);
-    
-    // Fetch the role
+  private fetchRoleByName(roleName: RoleName): Observable<Role | null> {
     return this.roleService.getRoleByName(roleName).pipe(
-      map(role => {
-        console.log(`[AuthorizationService] Fetched role for current user:`, role);
-        
-        if (!role) {
-          console.error(`[AuthorizationService] No role found for current user`);
-          console.error(`[AuthorizationService] User details:`, currentUser);
-        }
-        
-        return role || null;
-      }),
+      take(1),
+      map(role => role || null),
       catchError(error => {
-        console.error(`[AuthorizationService] Error fetching current user role:`, error);
+        console.error(`[AuthorizationService] Error fetching role:`, error);
         return of(null);
       })
     );
   }
 
-  private convertUserRoleToRoleName(role: User['role'] | string | null | undefined): RoleName {
-    console.log(`[AuthorizationService] Converting role:`, role);
-    
-    // Handle null, undefined, or empty input
-    if (!role) {
-      console.warn(`[AuthorizationService] Role is null/undefined/empty, defaulting to CUSTOMER`);
-      return RoleName.CUSTOMER;
-    }
-    
-    try {
-      // Normalize the role to a string if it's an object or enum
-      const roleString = typeof role === 'object' 
-        ? (role as User['role']).toString() 
-        : String(role);
-      
-      // Convert role name to lowercase for consistent matching
-      const normalizedRole = roleString.toLowerCase().replace(/\s+/g, '_');
-      
-      // Convert MongoDB role name to RoleName enum
-      switch (normalizedRole) {
-        case 'admin':
-          return RoleName.ADMIN;
-        case 'inventory_staff':
-        case 'inventory staff':
-          return RoleName.INVENTORY_STAFF;
-        case 'logistics_manager':
-        case 'logistics manager':
-          return RoleName.LOGISTICS_MANAGER;
-        case 'customer':
-          return RoleName.CUSTOMER;
-        default:
-          console.warn(`[AuthorizationService] Unknown role: ${roleString}, defaulting to CUSTOMER`);
-          return RoleName.CUSTOMER;
-      }
-    } catch (error) {
-      console.error(`[AuthorizationService] Error converting role:`, error);
-      return RoleName.CUSTOMER;
-    }
-  }
-
-  private checkPermission(requiredPermission: Permission, userRole: Role): boolean {
-    console.log(`[AuthorizationService] Checking permission:`, requiredPermission);
-    console.log(`[AuthorizationService] Against role:`, userRole);
-
-    if (!userRole || !userRole.permissions) {
-      console.error(`[AuthorizationService] Invalid role or missing permissions`);
-      return false;
-    }
-
-    // Map 'list' permission to 'read' since they serve the same purpose
-    const effectivePermission = {
-      ...requiredPermission,
-      type: requiredPermission.type === PermissionType.LIST ? PermissionType.READ : requiredPermission.type
-    };
-
-    console.log(`[AuthorizationService] Effective permission after mapping:`, effectivePermission);
-
-    // Log all permissions for the role
-    console.log(`[AuthorizationService] Role permissions:`, 
-      JSON.stringify(userRole.permissions, null, 2)
-    );
-
-    // Check if the role has the required permission
-    const hasPermission = userRole.permissions.some(rolePermission => {
-      const matches = 
-        rolePermission.resource === effectivePermission.resource && 
-        rolePermission.type === effectivePermission.type;
-      
-      console.log(`[AuthorizationService] Comparing permissions:
-        Required: ${JSON.stringify(effectivePermission)}
-        Role Permission: ${JSON.stringify(rolePermission)}
-        Matches: ${matches}`);
-      
-      return matches;
-    });
-
-    console.log(`[AuthorizationService] Final permission check result: ${hasPermission}`);
-    return hasPermission;
-  }
-
-  // Initialize user role with more robust error handling
   private initializeUserRole(): void {
-    // Check if user is authenticated first
-    const token = localStorage.getItem('token');
-    const storedUserRole = localStorage.getItem('userRole');
-
-    if (!token) {
-      console.log('[AuthorizationService] No token found, skipping role initialization');
-      this.currentUserRoleSubject.next(null);
-      return;
-    }
-
-    // If stored user role exists, try to use it
-    if (storedUserRole) {
-      try {
-        const roleName = this.convertUserRoleToRoleName(storedUserRole);
+    this.extractCurrentUser().pipe(
+      switchMap(currentUser => {
+        if (!currentUser) {
+          console.log('[AuthorizationService] No current user found');
+          return of(null);
+        }
         
-        this.roleService.getRoleByName(roleName).pipe(
-          tap(role => {
-            console.log('[AuthorizationService] Initialized role from stored role:', role);
-            if (!role) {
-              console.error(`[AuthorizationService] Could not find role for: ${storedUserRole}`);
+        console.log('[AuthorizationService] Current user found:', currentUser);
+        
+        const roleName = this.convertToRoleName(currentUser.role);
+        console.log(`[AuthorizationService] Converted role name: ${roleName}`);
+        
+        return this.fetchRoleByName(roleName);
+      }),
+      take(1),
+      tap(role => {
+        if (role) {
+          console.log('[AuthorizationService] Role initialized:', role);
+          // Explicitly set the role in the BehaviorSubject
+          this.currentUserRoleSubject.next(role);
+          // Store role in localStorage for persistence
+          localStorage.setItem('userRole', JSON.stringify(role));
+        } else {
+          console.warn('[AuthorizationService] No role found during initialization');
+          this.clearCurrentUserRole();
+        }
+      }),
+      catchError(error => {
+        console.error('[AuthorizationService] Error initializing role:', error);
+        this.clearCurrentUserRole();
+        return of(null);
+      })
+    )
+    .subscribe();
+  }
+
+  private fetchCurrentUserRole(): Observable<Role | null> {
+    return this.extractCurrentUser().pipe(
+      switchMap(currentUser => {
+        if (!currentUser) {
+          return of(null);
+        }
+        
+        const roleName = this.convertToRoleName(currentUser.role);
+        return this.fetchRoleByName(roleName);
+      })
+    );
+  }
+
+  private updateCurrentUserRole(role: string | RoleName): void {
+    try {
+      const normalizedRoleName = this.convertToRoleName(role);
+      
+      console.log(`[AuthorizationService] Updating role: ${normalizedRoleName}`);
+      
+      this.fetchRoleByName(normalizedRoleName)
+        .pipe(
+          take(1),
+          tap(fetchedRole => {
+            if (fetchedRole) {
+              console.log('[AuthorizationService] Role fetched successfully:', fetchedRole);
+              // Explicitly set the role in the BehaviorSubject
+              this.currentUserRoleSubject.next(fetchedRole);
+              // Store role in localStorage for persistence
+              localStorage.setItem('userRole', JSON.stringify(fetchedRole));
+            } else {
+              console.warn(`[AuthorizationService] No role found for: ${normalizedRoleName}`);
+              this.clearCurrentUserRole();
             }
           }),
           catchError(error => {
-            console.error('[AuthorizationService] Error fetching role from stored role:', error);
+            console.error('[AuthorizationService] Error updating role:', error);
+            this.clearCurrentUserRole();
             return of(null);
           })
-        ).subscribe({
-          next: (role) => this.currentUserRoleSubject.next(role),
-          error: (err) => {
-            console.error('[AuthorizationService] Error in role initialization:', err);
-            this.currentUserRoleSubject.next(null);
-          }
-        });
-      } catch (error) {
-        console.error('[AuthorizationService] Error processing stored role:', error);
-        this.currentUserRoleSubject.next(null);
-      }
-      return;
+        )
+        .subscribe();
+    } catch (error) {
+      console.error('[AuthorizationService] Error in updateCurrentUserRole:', error);
+      this.clearCurrentUserRole();
     }
-
-    // If no stored role, fall back to fetching current user role
-    this.fetchCurrentUserRole().pipe(
-      tap(role => {
-        console.log('[AuthorizationService] Initializing user role:', role);
-        if (!role) {
-          console.error(`[AuthorizationService] No role found during initialization`);
-          const currentUser = this.extractCurrentUser();
-          console.error(`[AuthorizationService] Current user details:`, currentUser);
-        }
-      })
-    ).subscribe({
-      next: (role) => {
-        // Store the role name in localStorage for future use
-        if (role) {
-          localStorage.setItem('userRole', role.name);
-          this.currentUserRoleSubject.next(role);
-        } else {
-          this.currentUserRoleSubject.next(null);
-        }
-      },
-      error: (err) => {
-        console.error('[AuthorizationService] Error initializing user role:', err);
-        this.currentUserRoleSubject.next(null);
-      }
-    });
   }
 
-  // Get the current user role synchronously
-  getCurrentUserRole(): Role | null {
-    console.log('[AuthorizationService] Getting current user role');
-    
-    // First, check the current role subject
-    const currentRole = this.currentUserRoleSubject.value;
-    if (currentRole) {
-      console.log('[AuthorizationService] Returning role from subject:', currentRole);
-      return currentRole;
-    }
-    
-    // If no role in subject, try to get from localStorage
-    const storedUserRole = localStorage.getItem('userRole');
-    if (storedUserRole) {
-      try {
-        const roleName = this.convertUserRoleToRoleName(storedUserRole);
-        
-        // This is a synchronous lookup in predefined roles
-        const role = DEFAULT_ROLES.find((r: Role) => r.name === roleName);
-        
-        console.log('[AuthorizationService] Returning role from localStorage:', role);
-        return role || null;
-      } catch (error) {
-        console.error('[AuthorizationService] Error getting role from localStorage:', error);
-      }
-    }
-    
-    console.error('[AuthorizationService] No current user role found');
-    return null;
-  }
-
-  /**
-   * Check if the current user has a specific permission for a resource
-   * @param resource The resource type to check permissions for
-   * @param permissionType The type of permission to check
-   * @returns Observable<boolean> indicating whether the user has the permission
-   */
   hasPermission(resource: ResourceType, permissionType: PermissionType): Observable<boolean> {
-    console.log(`[AuthorizationService] Checking permission for ${resource} - ${permissionType}`);
-    
-    // Get the current user role
-    const currentRole = this.currentUserRoleSubject.getValue();
-    
-    if (!currentRole) {
-      console.warn(`[AuthorizationService] No current role found, attempting to fetch it`);
-      
-      // Try to fetch the current role
-      return this.fetchCurrentUserRole().pipe(
-        map(role => {
-          if (!role) {
-            console.warn(`[AuthorizationService] Could not fetch role, denying permission`);
-            return false;
-          }
-          
-          return this.checkPermission(
-            { resource, type: permissionType },
-            role
-          );
-        }),
-        catchError(error => {
-          console.error(`[AuthorizationService] Error checking permission:`, error);
-          return of(false);
-        })
-      );
-    }
-    
-    // If we have a current role, check the permission
-    return of(this.checkPermission(
-      { resource, type: permissionType },
-      currentRole
-    ));
+    return this.currentUserRole$.pipe(
+      take(1),
+      map(role => {
+        if (!role) return false;
+        
+        return role.permissions.some(
+          permission => 
+            permission.resource === resource && 
+            permission.type === permissionType
+        );
+      }),
+      catchError(() => of(false))
+    );
   }
 
-  // Convenience methods for common permission checks
   canCreate(resource: ResourceType): Observable<boolean> {
     return this.hasPermission(resource, PermissionType.CREATE);
   }
@@ -350,157 +239,32 @@ export class AuthorizationService {
     return this.hasPermission(resource, PermissionType.DELETE);
   }
 
-  canList(resource: ResourceType): Observable<boolean> {
-    return this.hasPermission(resource, PermissionType.LIST);
-  }
-
-  // Reload user role (e.g., after role change)
-  reloadUserRole(): void {
-    this.fetchCurrentUserRole().subscribe({
-      next: (role) => {
-        console.log('[AuthorizationService] User role:', role);
-        if (!role) {
-          console.error(`[AuthorizationService] No role found for permission check`);
-          const currentUser = this.extractCurrentUser();
-          console.error(`[AuthorizationService] Current user details:`, currentUser);
-        }
-        this.currentUserRoleSubject.next(role);
-      },
-      error: (err) => {
-        console.error('[AuthorizationService] Error fetching user role:', err);
-        this.currentUserRoleSubject.next(null);
+  getCurrentUserRole(): Role | null {
+    const storedRole = localStorage.getItem('userRole');
+    
+    if (storedRole) {
+      try {
+        const parsedRole = JSON.parse(storedRole);
+        console.log('[AuthorizationService] Retrieved role from localStorage:', parsedRole);
+        return parsedRole;
+      } catch (error) {
+        console.error('[AuthorizationService] Error parsing stored role:', error);
       }
-    });
+    }
+
+    const currentRole = this.currentUserRoleSubject.getValue();
+    console.log('[AuthorizationService] Current role from BehaviorSubject:', currentRole);
+    
+    return currentRole;
   }
 
-  // Clear the current user role
-  clearUserRole(): void {
-    console.log('[AuthorizationService] Clearing user role');
-    
-    // Remove from localStorage
+  reloadUserRole(): void {
+    this.initializeUserRole();
+  }
+
+  private clearCurrentUserRole(): void {
+    this.currentUserRoleSubject.next(null);
     localStorage.removeItem('userRole');
-    
-    // Reset the current user role subject
-    this.currentUserRoleSubject.next(null);
-    
-    // Additional cleanup if needed
-    console.log('[AuthorizationService] User role cleared');
-  }
-
-  // Update the current user's role
-  updateCurrentUserRole(roleName: string): void {
-    // Find the role based on the role name
-    const role: Role = {
-      _id: this.generateRoleId(roleName),
-      name: roleName as RoleName,
-      description: this.getRoleDescription(roleName),
-      permissions: this.getRolePermissions(roleName)
-    };
-
-    console.log('[AuthorizationService] Updating current user role:', role);
-    this.currentUserRoleSubject.next(role);
-  }
-
-  // Clear the current user's role
-  clearCurrentUserRole(): void {
-    console.log('[AuthorizationService] Clearing current user role');
-    this.currentUserRoleSubject.next(null);
-  }
-
-  // Helper method to generate a role ID
-  private generateRoleId(roleName: string | null | undefined): string {
-    if (!roleName) {
-      console.warn(`[AuthorizationService] Attempting to generate role ID for null/undefined role, using 'unknown'`);
-      return 'role_unknown';
-    }
-    
-    try {
-      return `role_${String(roleName).toLowerCase().replace(/\s+/g, '_')}`;
-    } catch (error) {
-      console.error(`[AuthorizationService] Error generating role ID:`, error);
-      return 'role_unknown';
-    }
-  }
-
-  // Helper method to get role description
-  private getRoleDescription(roleName: string): string {
-    const descriptions: { [key: string]: string } = {
-      'ADMIN': 'Full system access with all permissions',
-      'INVENTORY_STAFF': 'Manages inventory and product information',
-      'LOGISTICS_MANAGER': 'Handles shipments and logistics',
-      'CUSTOMER': 'Basic access for viewing and creating orders'
-    };
-    return descriptions[roleName.toUpperCase()] || 'Unknown Role';
-  }
-
-  // Helper method to get role permissions
-  private getRolePermissions(roleName: string): Permission[] {
-    const rolePermissions: { [key: string]: Permission[] } = {
-      'ADMIN': [
-        // Users management
-        { resource: ResourceType.USERS, type: PermissionType.CREATE },
-        { resource: ResourceType.USERS, type: PermissionType.READ },
-        { resource: ResourceType.USERS, type: PermissionType.UPDATE },
-        { resource: ResourceType.USERS, type: PermissionType.DELETE },
-        // Roles management
-        { resource: ResourceType.ROLES, type: PermissionType.CREATE },
-        { resource: ResourceType.ROLES, type: PermissionType.READ },
-        { resource: ResourceType.ROLES, type: PermissionType.UPDATE },
-        { resource: ResourceType.ROLES, type: PermissionType.DELETE },
-        // Products management
-        { resource: ResourceType.PRODUCTS, type: PermissionType.CREATE },
-        { resource: ResourceType.PRODUCTS, type: PermissionType.READ },
-        { resource: ResourceType.PRODUCTS, type: PermissionType.UPDATE },
-        { resource: ResourceType.PRODUCTS, type: PermissionType.DELETE },
-        // Inventory management
-        { resource: ResourceType.INVENTORY_ITEMS, type: PermissionType.CREATE },
-        { resource: ResourceType.INVENTORY_ITEMS, type: PermissionType.READ },
-        { resource: ResourceType.INVENTORY_ITEMS, type: PermissionType.UPDATE },
-        { resource: ResourceType.INVENTORY_ITEMS, type: PermissionType.DELETE },
-        // Orders management
-        { resource: ResourceType.PURCHASE_ORDERS, type: PermissionType.CREATE },
-        { resource: ResourceType.PURCHASE_ORDERS, type: PermissionType.READ },
-        { resource: ResourceType.PURCHASE_ORDERS, type: PermissionType.UPDATE },
-        { resource: ResourceType.PURCHASE_ORDERS, type: PermissionType.DELETE },
-        // Shipments management
-        { resource: ResourceType.SHIPMENTS, type: PermissionType.CREATE },
-        { resource: ResourceType.SHIPMENTS, type: PermissionType.READ },
-        { resource: ResourceType.SHIPMENTS, type: PermissionType.UPDATE },
-        { resource: ResourceType.SHIPMENTS, type: PermissionType.DELETE }
-      ],
-      'INVENTORY_STAFF': [
-        // Products management (no delete)
-        { resource: ResourceType.PRODUCTS, type: PermissionType.CREATE },
-        { resource: ResourceType.PRODUCTS, type: PermissionType.READ },
-        { resource: ResourceType.PRODUCTS, type: PermissionType.UPDATE },
-        // Full inventory management
-        { resource: ResourceType.INVENTORY_ITEMS, type: PermissionType.CREATE },
-        { resource: ResourceType.INVENTORY_ITEMS, type: PermissionType.READ },
-        { resource: ResourceType.INVENTORY_ITEMS, type: PermissionType.UPDATE },
-        { resource: ResourceType.INVENTORY_ITEMS, type: PermissionType.DELETE },
-        // View orders
-        { resource: ResourceType.PURCHASE_ORDERS, type: PermissionType.READ }
-      ],
-      'LOGISTICS_MANAGER': [
-        // Full shipments management
-        { resource: ResourceType.SHIPMENTS, type: PermissionType.CREATE },
-        { resource: ResourceType.SHIPMENTS, type: PermissionType.READ },
-        { resource: ResourceType.SHIPMENTS, type: PermissionType.UPDATE },
-        { resource: ResourceType.SHIPMENTS, type: PermissionType.DELETE },
-        // Update order status
-        { resource: ResourceType.PURCHASE_ORDERS, type: PermissionType.READ },
-        { resource: ResourceType.PURCHASE_ORDERS, type: PermissionType.UPDATE },
-        // View inventory
-        { resource: ResourceType.INVENTORY_ITEMS, type: PermissionType.READ }
-      ],
-      'CUSTOMER': [
-        // View products
-        { resource: ResourceType.PRODUCTS, type: PermissionType.READ },
-        // Manage own orders
-        { resource: ResourceType.PURCHASE_ORDERS, type: PermissionType.CREATE },
-        { resource: ResourceType.PURCHASE_ORDERS, type: PermissionType.READ }
-      ]
-    };
-    return rolePermissions[roleName.toUpperCase()] || [];
+    console.log('[AuthorizationService] Cleared current user role');
   }
 }

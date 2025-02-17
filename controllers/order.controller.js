@@ -12,10 +12,14 @@ exports.createOrder = async (req, res) => {
         const order = new Order({
             orderNumber: finalOrderNumber,
             customer: customer || req.user._id,
+            customerVisibility: customer || req.user._id,
             items,
             status: 'pending',
             orderDate: new Date(),
-            totalValue: calculateTotalValue(items)
+            totalValue: calculateTotalValue(items),
+            visibleToRoles: req.user.role === 'admin' ? 
+                ['admin', 'customer', 'inventory_staff', 'logistics_manager'] : 
+                ['customer']
         });
 
         await order.save();
@@ -52,6 +56,40 @@ exports.getOrders = async (req, res) => {
         const { status, startDate, endDate } = req.query;
         const filter = {};
 
+        // Ensure user exists
+        if (!req.user) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        console.log('[GetOrders] Current User Role:', req.user.role);
+        console.log('[GetOrders] Current User ID:', req.user._id);
+
+        // Role-based filtering
+        switch (req.user.role.toLowerCase()) {
+            case 'admin':
+                // Admin sees all orders, no filter needed
+                break;
+            case 'customer':
+                // Customer sees only their own orders
+                filter.customer = req.user._id;
+                break;
+            case 'inventory_staff':
+                // Inventory staff sees orders related to inventory
+                filter.visibleToRoles = { $in: ['inventory_staff'] };
+                break;
+            case 'logistics_manager':
+                // Logistics manager sees orders related to logistics
+                filter.visibleToRoles = { $in: ['logistics_manager'] };
+                break;
+            default:
+                return res.status(403).json({ 
+                    error: 'You do not have permission to perform this action',
+                    requiredRoles: ['admin', 'customer', 'inventory_staff', 'logistics_manager'],
+                    userRole: req.user.role
+                });
+        }
+
+        // Additional filtering options
         if (status) filter.status = status;
         if (startDate && endDate) {
             filter.orderDate = {
@@ -60,12 +98,18 @@ exports.getOrders = async (req, res) => {
             };
         }
 
+        console.log('[GetOrders] Constructed Filter:', filter);
+
+        // Fetch orders with population
         const orders = await Order.find(filter)
             .populate('customer', 'name email')
             .populate('items.product', 'name sku');
 
+        console.log(`[GetOrders] Found ${orders.length} orders`);
+
         res.json(orders);
     } catch (error) {
+        console.error('[GetOrders] Error:', error);
         res.status(500).json({ 
             message: 'Error retrieving orders', 
             error: error.message 
@@ -81,6 +125,13 @@ exports.getOrderById = async (req, res) => {
 
         if (!order) {
             return res.status(404).json({ message: 'Order not found' });
+        }
+
+        // Check order visibility based on user role
+        if (!order.isVisibleTo(req.user)) {
+            return res.status(403).json({ 
+                message: 'You do not have permission to view this order' 
+            });
         }
 
         res.json(order);

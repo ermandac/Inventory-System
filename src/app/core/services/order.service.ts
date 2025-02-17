@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, throwError } from 'rxjs';
+import { tap, catchError, map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 
 export interface OrderItem {
@@ -55,20 +56,47 @@ export class OrderService {
     return this.http.post<Order>(`${this.apiUrl}`, orderPayload);
   }
 
-  getOrders(filters?: {
-    status?: string;
-    startDate?: Date;
-    endDate?: Date;
+  getOrders(params?: {
+    status?: Order['status'], 
+    startDate?: Date, 
+    endDate?: Date
   }): Observable<Order[]> {
-    let params = new HttpParams();
-    
-    if (filters) {
-      if (filters.status) params = params.set('status', filters.status);
-      if (filters.startDate) params = params.set('startDate', filters.startDate.toISOString());
-      if (filters.endDate) params = params.set('endDate', filters.endDate.toISOString());
+    console.log('[OrderService] Fetching orders with params:', params);
+
+    // Create HttpParams for optional filters
+    let httpParams = new HttpParams();
+    if (params) {
+      if (params.status) {
+        httpParams = httpParams.set('status', params.status);
+      }
+      if (params.startDate) {
+        httpParams = httpParams.set('startDate', params.startDate.toISOString());
+      }
+      if (params.endDate) {
+        httpParams = httpParams.set('endDate', params.endDate.toISOString());
+      }
     }
 
-    return this.http.get<Order[]>(this.apiUrl, { params });
+    return this.http.get<Order[]>(this.apiUrl, { 
+      params: httpParams 
+    }).pipe(
+      map(orders => {
+        console.log(`[OrderService] Retrieved ${orders.length} orders`);
+        return orders;
+      }),
+      catchError(error => {
+        console.error('[OrderService] Error fetching orders:', error);
+        
+        // More detailed error handling
+        if (error.status === 403) {
+          console.warn('[OrderService] Forbidden: Check user permissions');
+          // You might want to show a specific error message to the user
+        }
+        
+        // Rethrow the error after logging
+        return throwError(() => error);
+      })
+    );
   }
 
   getOrderById(id: string): Observable<Order> {
