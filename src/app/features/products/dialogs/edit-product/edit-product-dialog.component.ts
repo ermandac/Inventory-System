@@ -38,7 +38,8 @@ export class EditProductDialogComponent {
       name: [product.name, Validators.required],
       model: [product.model, Validators.required],
       manufacturer: [product.manufacturer, Validators.required],
-      category: [product.category, Validators.required]
+      category: [product.category, Validators.required],
+      unitPrice: [product.unitPrice, [Validators.required, Validators.min(0)]]
     });
   }
 

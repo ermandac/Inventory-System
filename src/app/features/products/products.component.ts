@@ -31,7 +31,7 @@ import { EditProductDialogComponent } from './dialogs/edit-product/edit-product-
   styleUrls: ['./products.component.scss']
 })
 export class ProductsComponent implements OnInit, AfterViewInit {
-  displayedColumns: string[] = ['sku', 'name', 'model', 'manufacturer', 'category', 'actions'];
+  displayedColumns: string[] = ['sku', 'name', 'model', 'manufacturer', 'category', 'unitPrice', 'actions'];
   dataSource: MatTableDataSource<Product> = new MatTableDataSource<Product>([]);
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;

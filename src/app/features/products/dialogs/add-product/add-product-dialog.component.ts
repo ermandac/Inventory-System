@@ -36,7 +36,8 @@ export class AddProductDialogComponent {
       name: ['', Validators.required],
       model: ['', Validators.required],
       manufacturer: ['', Validators.required],
-      category: ['', Validators.required]
+      category: ['', Validators.required],
+      unitPrice: [0, [Validators.required, Validators.min(0)]]
     });
   }
 

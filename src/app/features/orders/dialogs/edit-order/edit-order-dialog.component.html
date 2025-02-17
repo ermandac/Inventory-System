@@ -32,12 +32,12 @@
 
           <ng-container matColumnDef="unitPrice">
             <mat-header-cell *matHeaderCellDef>Unit Price</mat-header-cell>
-            <mat-cell *matCellDef="let item">${{ item.unitPrice }}</mat-cell>
+            <mat-cell *matCellDef="let item">₱{{ item.unitPrice | number:'1.2-2' }}</mat-cell>
           </ng-container>
 
           <ng-container matColumnDef="total">
             <mat-header-cell *matHeaderCellDef>Total</mat-header-cell>
-            <mat-cell *matCellDef="let item">${{ item.quantity * item.unitPrice }}</mat-cell>
+            <mat-cell *matCellDef="let item">₱{{ item.quantity * item.unitPrice | number:'1.2-2' }}</mat-cell>
           </ng-container>
 
           <mat-header-row *matHeaderRowDef="['product', 'quantity', 'unitPrice', 'total']"></mat-header-row>
@@ -45,7 +45,7 @@
         </mat-table>
 
         <div class="order-summary">
-          <h3>Order Total: ${{ calculateTotalValue() }}</h3>
+          <h3>Order Total: ₱{{ calculateTotalValue() | number:'1.2-2' }}</h3>
         </div>
       </div>
     </form>

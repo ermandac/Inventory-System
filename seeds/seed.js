@@ -1,6 +1,9 @@
 const mongoose = require('mongoose');
 const Product = require('../models/product');
 const Item = require('../models/item');
+const Role = require('../models/role');
+const User = require('../models/user');
+const Order = require('../models/order');
 require('dotenv').config();
 
 const medicalProducts = [
@@ -44,7 +47,7 @@ const medicalProducts = [
             serviceGuide: 'xr3000_service.pdf',
             warrantyTerms: '2 years parts and labor'
         },
-        price: 75000.00
+        unitPrice: 4200000.00
     },
     {
         name: 'Patient Monitor',
@@ -86,7 +89,7 @@ const medicalProducts = [
             serviceGuide: 'lifewatch_service.pdf',
             warrantyTerms: '1 year standard warranty'
         },
-        price: 8500.00
+        unitPrice: 476000.00
     },
     {
         name: 'Anesthesia Machine',
@@ -124,11 +127,11 @@ const medicalProducts = [
             'Daily system check'
         ],
         documentation: {
-            userManual: 'anesthesia5000_manual.pdf',
+            userManual: 'anesthesia_manual.pdf',
             serviceGuide: 'anesthesia5000_service.pdf',
             warrantyTerms: '3 years limited warranty'
         },
-        price: 45000.00
+        unitPrice: 25200000.00
     },
     {
         name: 'Surgical Light',
@@ -137,53 +140,11 @@ const medicalProducts = [
         manufacturer: 'OptiMed Devices',
         category: 'Surgical Equipment',
         specifications: {
-            power: '110-240V',
-            dimensions: '80x80x35 cm',
+            power: '110V',
+            dimensions: '180x120x50 cm',
             weight: '45 kg',
-            luminosity: '160,000 lux',
-            colorTemp: '4500K'
-        },
-        certifications: [
-            {
-                type: 'FDA',
-                number: '510(k)123456',
-                validUntil: new Date('2026-12-31')
-            },
-            {
-                type: 'CE',
-                number: 'CE123456',
-                validUntil: new Date('2026-12-31')
-            },
-            {
-                type: 'ISO',
-                number: 'ISO13485-123456',
-                validUntil: new Date('2026-12-31')
-            }
-        ],
-        maintenanceRequirements: [
-            'Annual intensity check',
-            'Quarterly alignment check',
-            'Monthly cleaning'
-        ],
-        documentation: {
-            userManual: 'surgical_led_manual.pdf',
-            serviceGuide: 'surgical_led_service.pdf',
-            warrantyTerms: '2 years warranty'
-        },
-        price: 12000.00
-    },
-    {
-        name: 'Ultrasound System',
-        sku: 'US2000-001',
-        model: 'SonoXpert Pro',
-        manufacturer: 'UltraMed Imaging',
-        category: 'Diagnostic System',
-        specifications: {
-            power: '220V',
-            dimensions: '45x38x15 cm',
-            weight: '8 kg',
-            display: '21.5" LED',
-            probes: '3 ports'
+            lightIntensity: '160,000 lux',
+            colorTemperature: '4300K'
         },
         certifications: [
             {
@@ -204,15 +165,57 @@ const medicalProducts = [
         ],
         maintenanceRequirements: [
             'Annual calibration',
-            'Quarterly probe check',
-            'Weekly cleaning'
+            'Monthly cleaning',
+            'Quarterly LED check'
+        ],
+        documentation: {
+            userManual: 'surgical_led_manual.pdf',
+            serviceGuide: 'surgical_led_service.pdf',
+            warrantyTerms: '2 years warranty'
+        },
+        unitPrice: 672000.00
+    },
+    {
+        name: 'Ultrasound System',
+        sku: 'US6000-001',
+        model: 'SonoXpert 6000',
+        manufacturer: 'DiagnoScan Technologies',
+        category: 'Diagnostic System',
+        specifications: {
+            power: '220V',
+            dimensions: '90x60x180 cm',
+            weight: '250 kg',
+            resolution: '1920x1080 pixels',
+            probeTypes: ['Linear', 'Convex', 'Endocavitary']
+        },
+        certifications: [
+            {
+                type: 'FDA',
+                number: '510(k)123456',
+                validUntil: new Date('2026-12-31')
+            },
+            {
+                type: 'CE',
+                number: 'CE123456',
+                validUntil: new Date('2026-12-31')
+            },
+            {
+                type: 'ISO',
+                number: 'ISO13485-123456',
+                validUntil: new Date('2026-12-31')
+            }
+        ],
+        maintenanceRequirements: [
+            'Biannual software update',
+            'Annual probe calibration',
+            'Quarterly system diagnostic'
         ],
         documentation: {
             userManual: 'sonoxpert_manual.pdf',
             serviceGuide: 'sonoxpert_service.pdf',
             warrantyTerms: '1 year warranty'
         },
-        price: 35000.00
+        unitPrice: 19600000.00
     }
 ];
 
@@ -229,7 +232,7 @@ const generateItems = (products) => {
                 status: ['inventory', 'demo', 'delivery'][Math.floor(Math.random() * 3)],
                 purchaseInfo: {
                     date: new Date(Date.now() - Math.random() * 31536000000), // Random date within last year
-                    price: product.price * (0.9 + Math.random() * 0.2), // ±10% of product price
+                    price: product.unitPrice * (0.9 + Math.random() * 0.2), // ±10% of product price
                     supplier: ['MedSupply Corp', 'Global Medical', 'HealthTech Solutions'][Math.floor(Math.random() * 3)]
                 },
                 warranty: {

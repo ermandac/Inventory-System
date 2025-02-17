@@ -11,6 +11,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatSelectModule } from '@angular/material/select';
+import { MatSortModule } from '@angular/material/sort';
 
 // Component Imports
 import { OrdersComponent } from './orders.component';
@@ -35,7 +36,8 @@ import { UpdateOrderStatusDialogComponent } from './dialogs/update-order-status/
     MatIconModule,
     MatButtonModule,
     MatDialogModule,
-    MatSelectModule
+    MatSelectModule,
+    MatSortModule
   ],
   exports: [
     OrdersComponent

@@ -3,17 +3,19 @@ const Product = require('../models/product');
 
 exports.createOrder = async (req, res) => {
     try {
-        const { items, customer } = req.body;
+        const { items, customer, orderNumber } = req.body;
         
-        // Generate unique order number
-        const orderNumber = `ORD-${Date.now()}`;
+        // Use the order number from frontend if provided, otherwise generate a new one
+        const finalOrderNumber = orderNumber || generateOrderNumber();
 
         // Validate and create order
         const order = new Order({
-            orderNumber,
+            orderNumber: finalOrderNumber,
             customer: customer || req.user._id,
             items,
-            status: 'Pending'
+            status: 'pending',
+            orderDate: new Date(),
+            totalValue: calculateTotalValue(items)
         });
 
         await order.save();
@@ -29,6 +31,21 @@ exports.createOrder = async (req, res) => {
         });
     }
 };
+
+// Helper function to generate order number
+function generateOrderNumber() {
+    const prefix = 'ORD';
+    const timestamp = new Date().getTime();
+    const randomComponent = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    return `${prefix}-${timestamp}-${randomComponent}`;
+}
+
+// Helper function to calculate total value
+function calculateTotalValue(items) {
+    return items.reduce((total, item) => {
+        return total + (item.quantity * item.unitPrice);
+    }, 0);
+}
 
 exports.getOrders = async (req, res) => {
     try {

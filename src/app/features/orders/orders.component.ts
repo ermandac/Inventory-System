@@ -1,17 +1,18 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { Component, OnInit, ViewChild, AfterViewInit } from '@angular/core';
+import { MatDialog } from '@angular/material/dialog';
 import { MatPaginator } from '@angular/material/paginator';
 import { MatTableDataSource } from '@angular/material/table';
+import { MatSort } from '@angular/material/sort';
+import { MatSortModule } from '@angular/material/sort';
 
 import { Order } from '@core/models/order.model';
 import { OrderService } from '@core/services/order.service';
 import { AuthorizationService } from '@core/services/authorization.service';
 
+// Dialog Components
 import { CreateOrderDialogComponent } from './dialogs/create-order/create-order-dialog.component';
 import { EditOrderDialogComponent } from './dialogs/edit-order/edit-order-dialog.component';
 import { UpdateOrderStatusDialogComponent } from './dialogs/update-order-status/update-order-status-dialog.component';
-
-import { ResourceType, PermissionType, Permission } from '@core/models/role.model';
 
 import { CommonModule } from '@angular/common';
 import { MatTableModule } from '@angular/material/table';
@@ -21,10 +22,9 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSelectModule } from '@angular/material/select';
+import { MatDialogModule } from '@angular/material/dialog';
 
-import { BehaviorSubject } from 'rxjs';
-import { catchError } from 'rxjs/operators';
-import { Observable } from 'rxjs';
+import { ResourceType, PermissionType } from '@core/models/role.model';
 
 @Component({
   selector: 'app-orders',
@@ -39,6 +39,7 @@ import { Observable } from 'rxjs';
     MatButtonModule,
     MatDialogModule,
     MatSelectModule,
+    MatSortModule,
     CreateOrderDialogComponent,
     EditOrderDialogComponent,
     UpdateOrderStatusDialogComponent
@@ -46,12 +47,14 @@ import { Observable } from 'rxjs';
   templateUrl: './orders.component.html',
   styleUrls: ['./orders.component.scss']
 })
-export class OrdersComponent implements OnInit {
+export class OrdersComponent implements OnInit, AfterViewInit {
   displayedColumns: string[] = ['orderNumber', 'customer', 'status', 'orderDate', 'totalValue', 'actions'];
   dataSource: MatTableDataSource<Order> = new MatTableDataSource<Order>([]);
   loading = true;
+  canCreateOrder = false;
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
+  @ViewChild(MatSort) sort!: MatSort;
 
   // Statuses for filtering
   statusOptions: Order['status'][] = [
@@ -63,21 +66,20 @@ export class OrdersComponent implements OnInit {
     'cancelled'
   ];
 
-  // Permissions
-  canCreateOrder = false;
-  canEditOrder = false;
-  canDeleteOrder = false;
-
   constructor(
     private orderService: OrderService,
-    private authorizationService: AuthorizationService,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private authorizationService: AuthorizationService
   ) {}
 
   ngOnInit(): void {
-    // Check permissions
     this.checkPermissions();
     this.loadOrders();
+  }
+
+  ngAfterViewInit(): void {
+    this.dataSource.paginator = this.paginator;
+    this.dataSource.sort = this.sort;
   }
 
   checkPermissions(): void {
@@ -85,72 +87,21 @@ export class OrdersComponent implements OnInit {
     this.authorizationService.hasPermission(
       ResourceType.PURCHASE_ORDERS, 
       PermissionType.CREATE
-    ).subscribe(canCreate => {
-      this.canCreateOrder = canCreate;
-    });
-
-    // Check edit permission
-    this.authorizationService.hasPermission(
-      ResourceType.PURCHASE_ORDERS, 
-      PermissionType.UPDATE
-    ).subscribe(canEdit => {
-      this.canEditOrder = canEdit;
-    });
-
-    // Check delete permission
-    this.authorizationService.hasPermission(
-      ResourceType.PURCHASE_ORDERS, 
-      PermissionType.DELETE
-    ).subscribe(canDelete => {
-      this.canDeleteOrder = canDelete;
-    });
+    ).subscribe(canCreate => this.canCreateOrder = canCreate);
   }
 
   loadOrders(): void {
-    this.orderService.getOrders().subscribe(orders => {
-      this.dataSource.data = orders;
-      this.dataSource.paginator = this.paginator;
-      this.loading = false;
-    }, error => {
-      console.error('Error fetching orders:', error);
-      this.loading = false;
-    });
-  }
-
-  openCreateOrderDialog(): void {
-    const dialogRef = this.dialog.open(CreateOrderDialogComponent, {
-      width: '600px'
-    });
-
-    dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        this.loadOrders();
+    this.loading = true;
+    this.orderService.getOrders().subscribe({
+      next: (orders) => {
+        this.dataSource.data = orders;
+        this.loading = false;
+      },
+      error: (error) => {
+        console.error('Error loading orders', error);
+        this.loading = false;
       }
     });
-  }
-
-  editOrder(order: Order): void {
-    const dialogRef = this.dialog.open(EditOrderDialogComponent, {
-      width: '600px',
-      data: { order }
-    });
-
-    dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        this.loadOrders();
-      }
-    });
-  }
-
-  deleteOrder(order: Order): void {
-    if (confirm(`Are you sure you want to delete order ${order.orderNumber}?`)) {
-      if (order._id) {
-        this.orderService.deleteOrder(order._id!).subscribe({
-          next: () => this.loadOrders(),
-          error: (err) => console.error('Error deleting order', err)
-        });
-      }
-    }
   }
 
   applyFilter(event: Event): void {
@@ -162,65 +113,55 @@ export class OrdersComponent implements OnInit {
     }
   }
 
-  getOrderStatusLabel(status: Order['status']): string {
-    // Convert status to a more readable format
-    return status.split('_').map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' ');
-  }
+  openCreateOrderDialog(): void {
+    const dialogRef = this.dialog.open(CreateOrderDialogComponent, {
+      width: '90%',
+      height: '90%'
+    });
 
-  viewOrderDetails(orderId: string | undefined): void {
-    if (orderId) {
-      this.orderService.getOrderById(orderId).subscribe({
-        next: (order) => {
-          // TODO: Implement order details dialog or navigation
-          console.log('Order Details:', order);
-        },
-        error: (err) => {
-          console.error('Error fetching order details', err);
-        }
-      });
-    }
-  }
-
-  canUpdateStatus(order: Order): Observable<boolean> {
-    return this.authorizationService.hasPermission(
-      ResourceType.PURCHASE_ORDERS, 
-      PermissionType.UPDATE
-    );
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.loadOrders();
+      }
+    });
   }
 
   updateOrderStatus(order: Order): void {
-    // Check if user has permission to update order status
-    this.canUpdateStatus(order).subscribe(canUpdate => {
-      if (canUpdate) {
-        // Open a dialog to select new status
-        const dialogRef = this.dialog.open(UpdateOrderStatusDialogComponent, {
-          width: '250px',
-          data: { order: order }
-        });
+    const dialogRef = this.dialog.open(UpdateOrderStatusDialogComponent, {
+      width: '400px',
+      data: { order }
+    });
 
-        dialogRef.afterClosed().subscribe(newStatus => {
-          if (newStatus) {
-            // Call order service to update status
-            this.orderService.updateOrderStatus(order._id, newStatus)
-              .pipe(
-                catchError(error => {
-                  console.error('Error updating order status', error);
-                  // TODO: Add user-friendly error handling
-                  return [];
-                })
-              )
-              .subscribe(() => {
-                // Refresh order list or update specific order
-                this.loadOrders();
-              });
-          }
-        });
-      } else {
-        // TODO: Show permission denied message
-        console.warn('User does not have permission to update order status');
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.loadOrders();
       }
     });
+  }
+
+  viewOrderDetails(orderId: string): void {
+    const dialogRef = this.dialog.open(EditOrderDialogComponent, {
+      width: '600px',
+      data: { orderId }
+    });
+  }
+
+  getOrderStatusLabel(status: Order['status']): string {
+    const statusLabels: Record<Order['status'], string> = {
+      'pending': 'Pending',
+      'processing': 'Processing',
+      'ready_for_delivery': 'Ready for Delivery',
+      'in_delivery': 'In Delivery',
+      'completed': 'Completed',
+      'cancelled': 'Cancelled'
+    };
+    return statusLabels[status] || status;
+  }
+
+  async canUpdateStatus(order: Order): Promise<boolean> {
+    return this.authorizationService.hasPermission(
+      ResourceType.PURCHASE_ORDERS, 
+      PermissionType.UPDATE
+    ).toPromise() || false;
   }
 }
