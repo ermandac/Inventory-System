@@ -64,7 +64,7 @@ exports.getOrders = async (req, res) => {
         console.log('[GetOrders] Current User Role:', req.user.role);
         console.log('[GetOrders] Current User ID:', req.user._id);
 
-        // Role-based filtering
+        // Simplified role-based filtering
         switch (req.user.role.toLowerCase()) {
             case 'admin':
                 // Admin sees all orders, no filter needed
@@ -74,12 +74,10 @@ exports.getOrders = async (req, res) => {
                 filter.customer = req.user._id;
                 break;
             case 'inventory_staff':
-                // Inventory staff sees orders related to inventory
-                filter.visibleToRoles = { $in: ['inventory_staff'] };
+                // Inventory staff sees all orders (for management purposes)
                 break;
             case 'logistics_manager':
-                // Logistics manager sees orders related to logistics
-                filter.visibleToRoles = { $in: ['logistics_manager'] };
+                // Logistics manager sees all orders (for logistics management)
                 break;
             default:
                 return res.status(403).json({ 
@@ -100,12 +98,13 @@ exports.getOrders = async (req, res) => {
 
         console.log('[GetOrders] Constructed Filter:', filter);
 
-        // Fetch orders with population
+        // Fetch orders with populated product details
         const orders = await Order.find(filter)
-            .populate('customer', 'name email')
-            .populate('items.product', 'name sku');
-
-        console.log(`[GetOrders] Found ${orders.length} orders`);
+            .populate({
+                path: 'items.product',
+                select: 'name description' // Select only necessary product details
+            })
+            .sort({ orderDate: -1 }); // Sort by most recent first
 
         res.json(orders);
     } catch (error) {

@@ -1,5 +1,5 @@
-import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, of } from 'rxjs';
+import { Injectable, Inject, forwardRef } from '@angular/core';
+import { BehaviorSubject, Observable, of, EMPTY } from 'rxjs';
 import { map, switchMap, tap, catchError, take } from 'rxjs/operators';
 import { 
   Role, 
@@ -20,11 +20,12 @@ import { AuthStateService } from './auth-state.service';
 export class AuthorizationService {
   private currentUserRoleSubject = new BehaviorSubject<Role | null>(null);
   currentUserRole$ = this.currentUserRoleSubject.asObservable();
+  private cachedRole: Role | null = null;
 
   constructor(
-    private roleService: RoleService,
-    private userService: UserService,
-    private authStateService: AuthStateService
+    @Inject(forwardRef(() => RoleService)) private roleService: RoleService,
+    @Inject(forwardRef(() => UserService)) private userService: UserService,
+    @Inject(forwardRef(() => AuthStateService)) private authStateService: AuthStateService
   ) {
     // Explicitly initialize user role on service creation
     this.initializeUserRole();
@@ -143,9 +144,7 @@ export class AuthorizationService {
         if (role) {
           console.log('[AuthorizationService] Role initialized:', role);
           // Explicitly set the role in the BehaviorSubject
-          this.currentUserRoleSubject.next(role);
-          // Store role in localStorage for persistence
-          localStorage.setItem('userRole', JSON.stringify(role));
+          this.updateCurrentUserRole(role);
         } else {
           console.warn('[AuthorizationService] No role found during initialization');
           this.clearCurrentUserRole();
@@ -173,38 +172,52 @@ export class AuthorizationService {
     );
   }
 
-  private updateCurrentUserRole(role: string | RoleName): void {
-    try {
-      const normalizedRoleName = this.convertToRoleName(role);
-      
-      console.log(`[AuthorizationService] Updating role: ${normalizedRoleName}`);
-      
-      this.fetchRoleByName(normalizedRoleName)
-        .pipe(
-          take(1),
-          tap(fetchedRole => {
+  private updateCurrentUserRole(role: Role | string | RoleName): void {
+    if (typeof role === 'string' || typeof role === 'object' && 'name' in role) {
+      // If role is a string or RoleName, fetch the full role object
+      try {
+        const normalizedRoleName = typeof role === 'string' 
+          ? this.convertToRoleName(role) 
+          : role.name;
+
+        this.roleService.getRoleByName(normalizedRoleName)
+          .pipe(
+            catchError(error => {
+              console.error(`[AuthorizationService] Error fetching role: ${normalizedRoleName}`, error);
+              this.clearCurrentUserRole();
+              return EMPTY;
+            })
+          )
+          .subscribe(fetchedRole => {
             if (fetchedRole) {
-              console.log('[AuthorizationService] Role fetched successfully:', fetchedRole);
-              // Explicitly set the role in the BehaviorSubject
-              this.currentUserRoleSubject.next(fetchedRole);
-              // Store role in localStorage for persistence
-              localStorage.setItem('userRole', JSON.stringify(fetchedRole));
+              this.updateRoleInternally(fetchedRole);
             } else {
               console.warn(`[AuthorizationService] No role found for: ${normalizedRoleName}`);
               this.clearCurrentUserRole();
             }
-          }),
-          catchError(error => {
-            console.error('[AuthorizationService] Error updating role:', error);
-            this.clearCurrentUserRole();
-            return of(null);
-          })
-        )
-        .subscribe();
-    } catch (error) {
-      console.error('[AuthorizationService] Error in updateCurrentUserRole:', error);
-      this.clearCurrentUserRole();
+          });
+      } catch (error) {
+        console.error('[AuthorizationService] Error in role update:', error);
+        this.clearCurrentUserRole();
+      }
+    } else if (role && 'permissions' in role) {
+      // If role is a full Role object
+      this.updateRoleInternally(role);
     }
+  }
+
+  private updateRoleInternally(role: Role): void {
+    this.currentUserRoleSubject.next(role);
+    
+    // Persist role in localStorage
+    try {
+      localStorage.setItem('userRole', JSON.stringify(role));
+    } catch (error) {
+      console.error('[AuthorizationService] Failed to store role in localStorage', error);
+    }
+    
+    // Update cache
+    this.cachedRole = role;
   }
 
   hasPermission(resource: ResourceType, permissionType: PermissionType): Observable<boolean> {
@@ -240,31 +253,91 @@ export class AuthorizationService {
   }
 
   getCurrentUserRole(): Role | null {
+    // Return cached role if available to reduce redundant parsing
+    if (this.cachedRole) {
+      return this.cachedRole;
+    }
+
     const storedRole = localStorage.getItem('userRole');
     
     if (storedRole) {
       try {
-        const parsedRole = JSON.parse(storedRole);
-        console.log('[AuthorizationService] Retrieved role from localStorage:', parsedRole);
-        return parsedRole;
+        this.cachedRole = JSON.parse(storedRole);
+        return this.cachedRole;
       } catch (error) {
-        console.error('[AuthorizationService] Error parsing stored role:', error);
+        console.error('[AuthorizationService] Error parsing stored role');
       }
     }
 
     const currentRole = this.currentUserRoleSubject.getValue();
-    console.log('[AuthorizationService] Current role from BehaviorSubject:', currentRole);
+    this.cachedRole = currentRole;
     
     return currentRole;
   }
 
   reloadUserRole(): void {
-    this.initializeUserRole();
+    this.userService.currentUser$.pipe(
+      take(1),
+      switchMap(user => {
+        if (user && user.role) {
+          return this.roleService.getRoleByName(user.role).pipe(
+            catchError(error => {
+              console.error('[AuthorizationService] Error reloading user role:', error);
+              this.clearCurrentUserRole();
+              return EMPTY;
+            })
+          );
+        }
+        return EMPTY;
+      })
+    ).subscribe(role => {
+      if (role) {
+        this.updateCurrentUserRole(role);
+      } else {
+        this.clearCurrentUserRole();
+      }
+    });
   }
 
   private clearCurrentUserRole(): void {
     this.currentUserRoleSubject.next(null);
     localStorage.removeItem('userRole');
+    this.cachedRole = null;
     console.log('[AuthorizationService] Cleared current user role');
+  }
+
+  // Permission check methods
+  canViewOrders(): boolean {
+    const currentRole = this.getCurrentUserRole();
+    return currentRole?.name === 'admin' || 
+           currentRole?.name === 'customer' || 
+           currentRole?.name === 'inventory_staff' || 
+           currentRole?.name === 'logistics_manager';
+  }
+
+  canCreateOrders(): boolean {
+    const currentRole = this.getCurrentUserRole();
+    return currentRole?.name === 'admin' || 
+           currentRole?.name === 'customer' || 
+           currentRole?.name === 'inventory_staff';
+  }
+
+  canUpdateOrderStatus(): boolean {
+    const currentRole = this.getCurrentUserRole();
+    return currentRole?.name === 'admin' || 
+           currentRole?.name === 'inventory_staff' || 
+           currentRole?.name === 'logistics_manager';
+  }
+
+  getUserPermissions(): {
+    canViewOrders: boolean;
+    canCreateOrders: boolean;
+    canUpdateOrderStatus: boolean;
+  } {
+    return {
+      canViewOrders: this.canViewOrders(),
+      canCreateOrders: this.canCreateOrders(),
+      canUpdateOrderStatus: this.canUpdateOrderStatus()
+    };
   }
 }

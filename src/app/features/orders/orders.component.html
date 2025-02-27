@@ -1,16 +1,10 @@
 <div class="orders-container">
-  <div class="orders-header">
-    <h1>Purchase Orders</h1>
-    
-    <!-- Create Order Button with Permission Check -->
-    <button 
-      *ngIf="canCreateOrder"
-      mat-raised-button 
-      color="primary" 
-      (click)="openCreateOrderDialog()"
-      class="create-order-btn">
-      <mat-icon>add</mat-icon> Create Order
-    </button>
+  <!-- Debug Information Panel -->
+  <div class="debug-info">
+    <h3>Debug Information</h3>
+    <p>Loading: {{ loading }}</p>
+    <p>Total Orders: {{ dataSource.data.length }}</p>
+    <p>Current User: {{ (currentUser$ | async)?.email }}</p>
   </div>
 
   <!-- Filter Input -->
@@ -19,97 +13,96 @@
     <input 
       matInput 
       (keyup)="applyFilter($event)" 
-      placeholder="Search orders..."
-      #filterInput>
+      placeholder="Search orders"
+    >
   </mat-form-field>
 
+  <!-- Create Order Button -->
+  <button 
+    mat-raised-button 
+    color="primary" 
+    (click)="openCreateOrderDialog()"
+  >
+    <mat-icon>add</mat-icon> Create Order
+  </button>
+
+  <!-- Spinner -->
+  <mat-progress-spinner 
+    *ngIf="loading" 
+    mode="indeterminate" 
+    color="primary">
+  </mat-progress-spinner>
+
   <!-- Orders Table -->
-  <table 
-    mat-table 
-    [dataSource]="dataSource" 
-    multiTemplateDataRows 
-    class="mat-elevation-z8">
-    
-    <!-- Order Number Column -->
-    <ng-container matColumnDef="orderNumber">
-      <th mat-header-cell *matHeaderCellDef>Order #</th>
-      <td mat-cell *matCellDef="let order">{{ order.orderNumber }}</td>
-    </ng-container>
+  <div *ngIf="!loading && dataSource.data.length > 0" class="table-container">
+    <table mat-table [dataSource]="dataSource" matSort class="mat-elevation-z8">
+      <!-- Order Number Column -->
+      <ng-container matColumnDef="orderNumber">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Order Number</th>
+        <td mat-cell *matCellDef="let order">{{ order.orderNumber }}</td>
+      </ng-container>
 
-    <!-- Customer Column -->
-    <ng-container matColumnDef="customer">
-      <th mat-header-cell *matHeaderCellDef>Customer</th>
-      <td mat-cell *matCellDef="let order">{{ order.customer?.name || 'N/A' }}</td>
-    </ng-container>
+      <!-- Status Column -->
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Status</th>
+        <td mat-cell *matCellDef="let order">
+          <span 
+            [ngClass]="{
+              'status-pending': order.status === 'pending',
+              'status-processing': order.status === 'processing',
+              'status-completed': order.status === 'completed',
+              'status-cancelled': order.status === 'cancelled'
+            }">
+            {{ order.status | titlecase }}
+          </span>
+        </td>
+      </ng-container>
 
-    <!-- Status Column -->
-    <ng-container matColumnDef="status">
-      <th mat-header-cell *matHeaderCellDef>Status</th>
-      <td mat-cell *matCellDef="let order">
-        <span 
-          [ngClass]="{
-            'status-pending': order.status === 'pending',
-            'status-processing': order.status === 'processing',
-            'status-completed': order.status === 'completed',
-            'status-cancelled': order.status === 'cancelled'
-          }">
-          {{ order.status | titlecase }}
-        </span>
-      </td>
-    </ng-container>
+      <!-- Order Date Column -->
+      <ng-container matColumnDef="orderDate">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Order Date</th>
+        <td mat-cell *matCellDef="let order">{{ order.orderDate | date:'mediumDate' }}</td>
+      </ng-container>
 
-    <!-- Order Date Column -->
-    <ng-container matColumnDef="orderDate">
-      <th mat-header-cell *matHeaderCellDef>Order Date</th>
-      <td mat-cell *matCellDef="let order">{{ order.orderDate | date:'mediumDate' }}</td>
-    </ng-container>
+      <!-- Total Value Column -->
+      <ng-container matColumnDef="totalValue">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Total Value</th>
+        <td mat-cell *matCellDef="let order">{{ order.totalValue | currency }}</td>
+      </ng-container>
 
-    <!-- Total Value Column -->
-    <ng-container matColumnDef="totalValue">
-      <th mat-header-cell *matHeaderCellDef>Total Value</th>
-      <td mat-cell *matCellDef="let order">{{ order.totalValue | currency }}</td>
-    </ng-container>
-
-    <!-- Actions Column -->
-    <ng-container matColumnDef="actions">
-      <th mat-header-cell *matHeaderCellDef>Actions</th>
-      <td mat-cell *matCellDef="let order">
-        <div class="action-buttons">
-          <!-- View Order Details -->
+      <!-- Actions Column -->
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef>Actions</th>
+        <td mat-cell *matCellDef="let order">
           <button 
             mat-icon-button 
-            color="primary" 
-            (click)="viewOrderDetails(order._id)"
-            matTooltip="View Order Details">
+            color="primary"
+            (click)="viewOrderDetails(order)"
+          >
             <mat-icon>visibility</mat-icon>
           </button>
-
-          <!-- Update Order Status -->
           <button 
             mat-icon-button 
-            color="accent" 
-            *ngIf="(canUpdateStatus(order) | async)"
+            color="accent"
             (click)="updateOrderStatus(order)"
-            matTooltip="Update Order Status">
+          >
             <mat-icon>edit</mat-icon>
           </button>
-        </div>
-      </td>
-    </ng-container>
+        </td>
+      </ng-container>
 
-    <!-- Header and Row Definitions -->
-    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-    <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-  </table>
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+    </table>
 
-  <!-- Paginator -->
-  <mat-paginator 
-    [pageSizeOptions]="[5, 10, 25, 100]" 
-    aria-label="Select page of orders">
-  </mat-paginator>
+    <mat-paginator 
+      [pageSizeOptions]="[5, 10, 25, 100]"
+      aria-label="Select page of orders">
+    </mat-paginator>
+  </div>
 
-  <!-- Loading Indicator -->
-  <div *ngIf="loading" class="loading-overlay">
-    <mat-spinner></mat-spinner>
+  <!-- No Orders Message -->
+  <div *ngIf="!loading && dataSource.data.length === 0" class="no-orders-message">
+    <p>No orders found.</p>
   </div>
 </div>

@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Inject, forwardRef } from '@angular/core';
 import { BehaviorSubject, Observable, of, map, catchError } from 'rxjs';
 import { Router } from '@angular/router';
 import { RoleName } from '@core/models/role.model';
@@ -78,6 +78,7 @@ export class NavigationService {
   ];
 
   constructor(
+    @Inject(forwardRef(() => AuthorizationService)) 
     private authorizationService: AuthorizationService,
     private router: Router
   ) {

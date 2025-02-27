@@ -12,11 +12,6 @@ const orderSchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
-    visibleToRoles: [{
-        type: String,
-        enum: ['admin', 'customer', 'inventory_staff', 'logistics_manager'],
-        default: ['customer']
-    }],
     customerVisibility: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
@@ -52,47 +47,28 @@ const orderSchema = new mongoose.Schema({
             default: 'inventory'
         }
     }],
+    orderDate: {
+        type: Date,
+        default: Date.now
+    },
+    totalValue: {
+        type: Number,
+        required: true
+    },
     forecastingMetadata: {
         seasonalityFactor: {
             type: Number,
-            default: 1.0
+            default: 1
         },
-        predictedDemand: {
-            type: Number
-        },
-        historicalDemandTrend: {
-            type: [Number]
-        }
-    },
-    orderDate: {
-        type: Date,
-        default: Date.now,
-        required: true
-    },
-    deliveryDate: {
-        type: Date
+        historicalDemandTrend: [{
+            date: Date,
+            quantity: Number
+        }]
     }
 }, {
     timestamps: true,
     toJSON: { virtuals: true },
-    toObject: { virtuals: true },
-    methods: {
-        isVisibleTo(user) {
-            // Check if the user can view this order
-            if (!user) return false;
-            
-            // Admin can see all orders
-            if (user.role === 'admin') return true;
-            
-            // Customer can only see their own orders
-            if (user.role === 'customer') {
-                return this.customer.toString() === user._id.toString();
-            }
-            
-            // Inventory staff and logistics managers can see orders based on their role
-            return this.visibleToRoles.includes(user.role);
-        }
-    }
+    toObject: { virtuals: true }
 });
 
 orderSchema.virtual('totalValue').get(function() {

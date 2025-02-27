@@ -155,7 +155,11 @@ export class AuthService {
     return localStorage.getItem('token');
   }
 
-  getCurrentUser(): User | null {
+  getCurrentUser(): Observable<User | null> {
+    return this.currentUser$;
+  }
+
+  getCurrentUserSync(): User | null {
     return this.currentUserSubject.getValue();
   }
 

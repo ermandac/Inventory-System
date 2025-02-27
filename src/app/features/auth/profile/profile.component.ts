@@ -3,8 +3,8 @@ import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { AuthService, User } from '../../../core/services/auth.service';
 import { Router } from '@angular/router';
+import { AuthService, User } from '@core/services/auth.service';
 
 @Component({
   selector: 'app-profile',
@@ -77,7 +77,9 @@ export class ProfileComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.user = this.authService.getCurrentUser();
+    this.authService.getCurrentUser().subscribe(user => {
+      this.user = user;
+    });
   }
 
   editProfile(): void {

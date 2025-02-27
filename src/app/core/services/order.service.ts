@@ -63,23 +63,25 @@ export class OrderService {
   }): Observable<Order[]> {
     console.log('[OrderService] Fetching orders with params:', params);
 
-    // Create HttpParams for optional filters
-    let httpParams = new HttpParams();
-    if (params) {
-      if (params.status) {
-        httpParams = httpParams.set('status', params.status);
-      }
-      if (params.startDate) {
-        httpParams = httpParams.set('startDate', params.startDate.toISOString());
-      }
-      if (params.endDate) {
-        httpParams = httpParams.set('endDate', params.endDate.toISOString());
-      }
+    // Create an object with only defined parameters
+    const queryParams: Record<string, string> = {};
+    
+    if (params?.status) {
+      queryParams.status = params.status;
+    }
+    
+    if (params?.startDate) {
+      queryParams.startDate = params.startDate.toISOString();
+    }
+    
+    if (params?.endDate) {
+      queryParams.endDate = params.endDate.toISOString();
     }
 
-    return this.http.get<Order[]>(this.apiUrl, { 
-      params: httpParams 
-    }).pipe(
+    // Create HttpParams from the filtered object
+    const httpParams = new HttpParams({ fromObject: queryParams });
+
+    return this.http.get<Order[]>(this.apiUrl, { params: httpParams }).pipe(
       map(orders => {
         console.log(`[OrderService] Retrieved ${orders.length} orders`);
         return orders;
@@ -90,7 +92,6 @@ export class OrderService {
         // More detailed error handling
         if (error.status === 403) {
           console.warn('[OrderService] Forbidden: Check user permissions');
-          // You might want to show a specific error message to the user
         }
         
         // Rethrow the error after logging
