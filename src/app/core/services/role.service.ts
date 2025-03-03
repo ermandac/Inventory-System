@@ -32,82 +32,45 @@ export class RoleService {
     );
   }
 
-  getRoleByName(name: RoleName): Observable<Role | null> {
-    // Validate input
-    if (!name) {
-      console.error(`[RoleService] Attempted to fetch role with empty/undefined name`);
-      return of(null);
-    }
-
-    console.log(`[RoleService] Fetching role with name: ${name}`);
+  // Convert RoleName to a normalized string
+  normalizeRoleName(roleName: RoleName | string): string {
+    const roleString = typeof roleName === 'string' 
+      ? roleName 
+      : RoleName[roleName];
     
-    // Attempt to fetch roles from the API with timeout and error handling
-    return this.http.get<Role[]>(`${this.apiUrl}`).pipe(
-      // Add timeout to prevent hanging
-      timeout(5000),
-      
-      map(roles => {
-        // Validate API response
-        if (!roles || roles.length === 0) {
-          console.error(`[RoleService] No roles found in the database`);
-          return null;
-        }
+    return roleString
+      .toLowerCase()
+      .replace(/\s+/g, '_')
+      .trim();
+  }
 
-        console.log(`[RoleService] Available roles: ${roles.map(r => r.name).join(', ')}`);
-        
-        // Normalize role name comparison
-        const normalizedName = name.toString().toLowerCase().replace(/\s+/g, '_');
-        
-        // Find role with case-insensitive and normalized name matching
-        const matchedRole = roles.find(role => 
-          role.name.toString().toLowerCase().replace(/\s+/g, '_') === normalizedName
-        );
-        
-        console.log(`[RoleService] Looking for normalized role: ${normalizedName}`);
-        console.log(`[RoleService] Found role:`, matchedRole);
-        
-        if (!matchedRole) {
-          console.error(`[RoleService] No matching role found for input: ${name}`);
-          console.error(`[RoleService] Available roles: ${roles.map(r => r.name).join(', ')}`);
-        }
-        
-        return matchedRole || null;
-      }),
-      
-      // Fallback to default roles if no role found
+  // Synchronous method to get role by name
+  getRoleByNameSync(roleName: string | RoleName): Role | null {
+    // Normalize role name
+    const normalizedRoleName = this.normalizeRoleName(roleName);
+
+    // Find matching role in predefined roles
+    const matchingRole = DEFAULT_ROLES.find(role => 
+      this.normalizeRoleName(role.name) === normalizedRoleName
+    );
+
+    return matchingRole || null;
+  }
+
+  // Single method to get role by name
+  getRoleByName(roleName: RoleName): Observable<Role | null> {
+    // Normalize role name
+    const normalizedRoleName = this.normalizeRoleName(roleName);
+
+    // Find matching role in predefined roles
+    const matchingRole = DEFAULT_ROLES.find(role => 
+      this.normalizeRoleName(role.name) === normalizedRoleName
+    );
+
+    return of(matchingRole || null).pipe(
       catchError(error => {
-        console.error(`[RoleService] Error fetching roles:`, error);
-        
-        // Fallback to default roles if API call fails
-        const defaultRoles: { [key: string]: Role } = {
-          'admin': {
-            _id: 'default-admin',
-            name: RoleName.ADMIN,
-            description: 'Full system access with all permissions',
-            permissions: Object.values(ResourceType).flatMap(resource => 
-              Object.values(PermissionType).map(type => ({ resource, type }))
-            ),
-            isDefault: false
-          },
-          'customer': {
-            _id: 'default-customer',
-            name: RoleName.CUSTOMER,
-            description: 'Can create and review purchase orders',
-            permissions: [
-              { resource: ResourceType.PURCHASE_ORDERS, type: PermissionType.CREATE },
-              { resource: ResourceType.PURCHASE_ORDERS, type: PermissionType.READ },
-              { resource: ResourceType.PURCHASE_ORDERS, type: PermissionType.LIST }
-            ],
-            isDefault: false
-          }
-        };
-
-        // Normalize fallback role name
-        const normalizedName = name.toString().toLowerCase().replace(/\s+/g, '_');
-        const fallbackRole = defaultRoles[normalizedName] || defaultRoles['admin'];
-        
-        console.log(`[RoleService] Using fallback role:`, fallbackRole);
-        return of(fallbackRole);
+        console.error(`[RoleService] Error fetching role: ${roleName}`, error);
+        return of(null);
       })
     );
   }

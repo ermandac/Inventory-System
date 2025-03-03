@@ -173,51 +173,93 @@ export class AuthorizationService {
   }
 
   private updateCurrentUserRole(role: Role | string | RoleName): void {
-    if (typeof role === 'string' || typeof role === 'object' && 'name' in role) {
-      // If role is a string or RoleName, fetch the full role object
-      try {
-        const normalizedRoleName = typeof role === 'string' 
-          ? this.convertToRoleName(role) 
-          : role.name;
+    // Synchronous fallback if observable method fails
+    try {
+      let normalizedRoleName: string;
 
-        this.roleService.getRoleByName(normalizedRoleName)
+      // Handle different input types
+      if (typeof role === 'string') {
+        normalizedRoleName = this.convertToRoleName(role);
+      } else if (typeof role === 'object' && 'name' in role) {
+        normalizedRoleName = this.convertToRoleName(role.name);
+      } else if (typeof role === 'number') {
+        // Handle RoleName enum
+        normalizedRoleName = this.convertToRoleName(RoleName[role]);
+      } else {
+        // Default fallback
+        console.warn('[AuthorizationService] Unrecognized role type');
+        this.clearCurrentUserRole();
+        return;
+      }
+
+      // Directly fetch role synchronously if possible
+      const fetchedRole = this.roleService.getRoleByNameSync(normalizedRoleName);
+
+      if (fetchedRole) {
+        this.updateRoleInternally(fetchedRole);
+        return;
+      }
+
+      // Fallback to observable method
+      const roleNameKey = Object.keys(RoleName).find(
+        key => RoleName[key as keyof typeof RoleName] === role
+      ) as RoleName | undefined;
+
+      if (roleNameKey) {
+        this.roleService.getRoleByName(roleNameKey)
           .pipe(
+            take(1),
             catchError(error => {
               console.error(`[AuthorizationService] Error fetching role: ${normalizedRoleName}`, error);
               this.clearCurrentUserRole();
               return EMPTY;
             })
           )
-          .subscribe(fetchedRole => {
-            if (fetchedRole) {
-              this.updateRoleInternally(fetchedRole);
+          .subscribe(observableRole => {
+            if (observableRole) {
+              this.updateRoleInternally(observableRole);
             } else {
               console.warn(`[AuthorizationService] No role found for: ${normalizedRoleName}`);
               this.clearCurrentUserRole();
             }
           });
-      } catch (error) {
-        console.error('[AuthorizationService] Error in role update:', error);
+      } else {
+        console.warn('[AuthorizationService] Could not convert role to RoleName');
         this.clearCurrentUserRole();
       }
-    } else if (role && 'permissions' in role) {
-      // If role is a full Role object
-      this.updateRoleInternally(role);
+
+    } catch (error) {
+      console.error('[AuthorizationService] Unexpected error in role update:', error);
+      this.clearCurrentUserRole();
     }
   }
 
-  private updateRoleInternally(role: Role): void {
-    this.currentUserRoleSubject.next(role);
-    
-    // Persist role in localStorage
-    try {
-      localStorage.setItem('userRole', JSON.stringify(role));
-    } catch (error) {
-      console.error('[AuthorizationService] Failed to store role in localStorage', error);
+  getCurrentUserRole(): Role | null {
+    // First, check cached role
+    if (this.cachedRole) {
+      return this.cachedRole;
     }
-    
-    // Update cache
-    this.cachedRole = role;
+
+    // Then check BehaviorSubject
+    const currentRole = this.currentUserRoleSubject.getValue();
+    if (currentRole) {
+      return currentRole;
+    }
+
+    // Last resort: try to extract from localStorage or user service
+    try {
+      const storedRole = localStorage.getItem('userRole');
+      if (storedRole) {
+        const parsedRole = JSON.parse(storedRole);
+        if (parsedRole && parsedRole.name) {
+          return parsedRole;
+        }
+      }
+    } catch (error) {
+      console.error('[AuthorizationService] Error parsing stored role');
+    }
+
+    return null;
   }
 
   hasPermission(resource: ResourceType, permissionType: PermissionType): Observable<boolean> {
@@ -252,29 +294,6 @@ export class AuthorizationService {
     return this.hasPermission(resource, PermissionType.DELETE);
   }
 
-  getCurrentUserRole(): Role | null {
-    // Return cached role if available to reduce redundant parsing
-    if (this.cachedRole) {
-      return this.cachedRole;
-    }
-
-    const storedRole = localStorage.getItem('userRole');
-    
-    if (storedRole) {
-      try {
-        this.cachedRole = JSON.parse(storedRole);
-        return this.cachedRole;
-      } catch (error) {
-        console.error('[AuthorizationService] Error parsing stored role');
-      }
-    }
-
-    const currentRole = this.currentUserRoleSubject.getValue();
-    this.cachedRole = currentRole;
-    
-    return currentRole;
-  }
-
   reloadUserRole(): void {
     this.userService.currentUser$.pipe(
       take(1),
@@ -300,10 +319,15 @@ export class AuthorizationService {
   }
 
   private clearCurrentUserRole(): void {
+    this.cachedRole = null;
     this.currentUserRoleSubject.next(null);
     localStorage.removeItem('userRole');
-    this.cachedRole = null;
     console.log('[AuthorizationService] Cleared current user role');
+  }
+
+  private updateRoleInternally(role: Role): void {
+    this.cachedRole = role;
+    this.currentUserRoleSubject.next(role);
   }
 
   // Permission check methods
@@ -317,9 +341,30 @@ export class AuthorizationService {
 
   canCreateOrders(): boolean {
     const currentRole = this.getCurrentUserRole();
-    return currentRole?.name === 'admin' || 
-           currentRole?.name === 'customer' || 
-           currentRole?.name === 'inventory_staff';
+    
+    if (!currentRole) {
+      console.warn('[AuthorizationService] No current role, denying order creation');
+      return false;
+    }
+
+    // Allowed roles for order creation
+    const allowedRoles = [
+      RoleName.ADMIN, 
+      RoleName.INVENTORY_STAFF, 
+      RoleName.LOGISTICS_MANAGER
+    ];
+
+    const normalizedUserRole = this.normalizeRoleName(currentRole.name);
+    const normalizedAllowedRoles = allowedRoles.map(role => this.normalizeRoleName(role.toString()));
+
+    const hasPermission = normalizedAllowedRoles.includes(normalizedUserRole);
+    
+    console.log('[AuthorizationService] Order creation permission:', {
+      userRole: currentRole.name,
+      hasPermission
+    });
+
+    return hasPermission;
   }
 
   canUpdateOrderStatus(): boolean {
@@ -327,6 +372,10 @@ export class AuthorizationService {
     return currentRole?.name === 'admin' || 
            currentRole?.name === 'inventory_staff' || 
            currentRole?.name === 'logistics_manager';
+  }
+
+  private normalizeRoleName(roleName: string): string {
+    return roleName.toLowerCase().replace(/\s+/g, '_');
   }
 
   getUserPermissions(): {
